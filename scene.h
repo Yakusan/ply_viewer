@@ -6,6 +6,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QMatrix4x4>
+#include <QMatrix3x3>
 #include <QVector3D>
 #include <QSharedPointer>
 

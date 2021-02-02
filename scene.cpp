@@ -169,11 +169,18 @@ void Scene::paintGL()
   //
   const CameraState camera = _currentCamera->state();
   // position and angles
-  _cameraMatrix.setToIdentity();
-  _cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
-  _cameraMatrix.rotate(camera.rotation.x(), 1, 0, 0);
-  _cameraMatrix.rotate(camera.rotation.y(), 0, 1, 0);
-  _cameraMatrix.rotate(camera.rotation.z(), 0, 0, 1);
+
+  float r[] = { 0.999932, 0.00920029, -0.00716871, 0.,
+                0.00925975, -0.999923, 0.00830599, 0.,
+                -0.00709174, -0.0083718, -0.99994, 0.,
+                 0., 0., 0., 1.};
+  QMatrix4x4 R(r) ;
+  //_cameraMatrix.setToIdentity();
+  _cameraMatrix = R;
+  _cameraMatrix.translate(QVector3D(-0.00343662, 0.00237505, -0.0111142));
+  //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
+
+
 
   // set clipping planes
   glEnable(GL_CLIP_PLANE1);

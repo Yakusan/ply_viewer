@@ -29,21 +29,30 @@ QSlider* createAnglecontrolSlider()
 }
 
 
-Viewer::Viewer(const QString& filePath)
+Viewer::Viewer(const QString& configPath)
 {
   // accept keyboard input
   setFocusPolicy(Qt::StrongFocus);
   setFocus();
+  QFile config;
+  config.setFileName(configPath);
+  config.open(QIODevice::ReadOnly);
+  QString buff = config.readAll();
+  QStringList list = buff.split('\n');
+  QString plyPath = list[0];
+  QString bundlePath = list[1];
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(filePath);
+  _scene = new Scene(plyPath);
   connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
   // make shared camera
   //
+
+  _loadBundle(bundlePath);
   _camera = QSharedPointer<Camera>(new Camera());
   _scene->attachCamera(_camera);
 
@@ -178,6 +187,12 @@ Viewer::Viewer(const QString& filePath)
   _camera->rotate(0, 50, 0);
   _scene->setColorAxisMode(Scene::COLOR_BY_Z);
   _scene->setPickpointEnabled(false);
+}
+
+
+void Viewer::_loadBundle(const QString& bundleFilePath)
+{
+
 }
 
 
