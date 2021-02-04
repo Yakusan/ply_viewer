@@ -30,11 +30,8 @@ private slots:
 
 
 private:
-  void _loadBundle(const QString& bundleFilePath);
-
   Scene* _scene;
   QSharedPointer<Camera> _camera;
-  QVector<QMatrix4x4> _listcamera;
   QLabel* _lblColorBy;
   QLabel* _lblDistanceInfo;
 

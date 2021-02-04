@@ -15,13 +15,14 @@
 
 const size_t POINT_STRIDE = 4; // x, y, z, index
 
-Scene::Scene(const QString& plyFilePath, QWidget* parent)
+Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent)
   : QOpenGLWidget(parent),
     _pointSize(1),
     _colorMode(COLOR_BY_Z)
 {
   _pickpointEnabled = false;
   _loadPLY(plyFilePath);
+  _loadBundle(bundlePath);
   setMouseTracking(true);
 
   // make trivial axes cross
@@ -99,6 +100,58 @@ void Scene::_loadPLY(const QString& plyFilePath) {
 }
 
 
+void Scene::_loadBundle(const QString& bundleFilePath)
+{
+    int nbCam;
+    float r[16], k[16];
+    memset(r, 0, sizeof(float)*16);
+
+    // open stream
+    std::fstream is;
+    is.open(bundleFilePath.toStdString().c_str(), std::fstream::in);
+
+    // ensure format with magic header
+    std::string line;
+    std::getline(is, line);
+    if (line != "# Bundle file v0.3") {
+      throw std::runtime_error("not a bundle file");
+    }
+
+    std::getline(is, line);
+    std::stringstream ss(line);
+    ss >> nbCam;
+    for (int i = 0; i < nbCam ; i++) {
+        std::getline(is, line);
+        ss.str(line);
+        ss >> k[0];
+        k[5] = k[0];
+        k[2] = 1416.;
+        k[6] = 1064.;
+        k[10] = 1.;
+        std::getline(is, line);
+        ss.str(line);
+        ss >> r[0] >> r[1] >> r[2];
+        std::getline(is, line);
+        ss.str(line);
+        ss >> r[4] >> r[5] >> r[6];
+        std::getline(is, line);
+        ss.str(line);
+        ss >> r[8] >> r[9] >> r[10];
+        std::getline(is, line);
+        ss.str(line);
+        //ss >> r[3] >> r[7] >> r[11];
+        r[15] = 1.;
+        QMatrix4x4 R(r);
+        QMatrix4x4 K(k);
+        _listcamera.append(R);
+        for (int j=0; j<16; j++) {
+            printf("%lf ", r[j]);
+        }
+        printf("\n");
+    }
+}
+
+
 Scene::~Scene()
 {
   _cleanup();
@@ -170,14 +223,9 @@ void Scene::paintGL()
   const CameraState camera = _currentCamera->state();
   // position and angles
 
-  float r[] = { 0.999932, 0.00920029, -0.00716871, 0.,
-                0.00925975, -0.999923, 0.00830599, 0.,
-                -0.00709174, -0.0083718, -0.99994, 0.,
-                 0., 0., 0., 1.};
-  QMatrix4x4 R(r) ;
+
   //_cameraMatrix.setToIdentity();
-  _cameraMatrix = R;
-  _cameraMatrix.translate(QVector3D(-0.00343662, 0.00237505, -0.0111142));
+  _cameraMatrix = _listcamera.at(0);
   //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
 
 

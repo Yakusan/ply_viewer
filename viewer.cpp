@@ -10,12 +10,17 @@
 #include <QGroupBox>
 #include <QCheckBox>
 #include <QSlider>
+#include <QMatrix3x3>
+#include <QVector3D>
 
 #include "camera.h"
 #include "scene.h"
 #include "viewer.h"
 
 #include <cassert>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 
 
@@ -45,14 +50,12 @@ Viewer::Viewer(const QString& configPath)
   //
   // make and connect scene widget
   //
-  _scene = new Scene(plyPath);
+  _scene = new Scene(plyPath, bundlePath);
   connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
   // make shared camera
   //
-
-  _loadBundle(bundlePath);
   _camera = QSharedPointer<Camera>(new Camera());
   _scene->attachCamera(_camera);
 
@@ -187,12 +190,6 @@ Viewer::Viewer(const QString& configPath)
   _camera->rotate(0, 50, 0);
   _scene->setColorAxisMode(Scene::COLOR_BY_Z);
   _scene->setPickpointEnabled(false);
-}
-
-
-void Viewer::_loadBundle(const QString& bundleFilePath)
-{
-
 }
 
 
