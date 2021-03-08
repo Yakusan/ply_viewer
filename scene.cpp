@@ -23,6 +23,8 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* par
   _pickpointEnabled = false;
   _loadPLY(plyFilePath);
   _loadBundle(bundlePath);
+  index = 0;
+  _cameraMatrix = _listcamera.at(0);
   setMouseTracking(true);
 
   // make trivial axes cross
@@ -140,7 +142,6 @@ void Scene::_loadBundle(const QString& bundleFilePath)
             std::getline(is, line);
             while ((pos = line.find(delimiter)) != std::string::npos) {
                 token = line.substr(0, pos);
-                qDebug() << stof(token);
                 r[j*4+l] = stof(token);
                 line.erase(0, pos + delimiter.length());
                 l++;
@@ -156,7 +157,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         QMatrix4x4 R(r);
         //QMatrix4x4 K(k);
 
-        _listcamera.append(R);
+        _listcamera.append(R.inverted());
     }
 }
 
@@ -218,7 +219,6 @@ void Scene::initializeGL()
 
 }
 
-
 void Scene::paintGL()
 {
   // ensure GL flags
@@ -232,9 +232,10 @@ void Scene::paintGL()
   const CameraState camera = _currentCamera->state();
   // position and angles
 
+  qDebug() << index << "paint gl pass";
+  _cameraMatrix = _listcamera.at(index);
 
-  //_cameraMatrix.setToIdentity();
-  _cameraMatrix = _listcamera.at(0);
+
   //_projectionMatrix = _listperspective.at(0);
   //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
 

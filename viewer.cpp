@@ -92,6 +92,17 @@ Viewer::Viewer(const QString& configPath)
     _scene->setColorAxisMode(newValue == 0 ? Scene::COLOR_BY_Z : Scene::COLOR_BY_ROW);
   });
 
+
+  _lblCamera = new QLabel();
+  auto cbCamera = new QComboBox();
+  for (int i = 0; i < _scene->_listcamera.length(); i++) {
+      cbCamera->addItem(QString("Camera" + QString(i)));
+  }
+  connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
+     _scene->index = newValue;
+     _scene->update();
+  });
+
   //
   // make 'clipping planes' controllers
   //
@@ -150,9 +161,12 @@ Viewer::Viewer(const QString& configPath)
   cpWidget->setMaximumWidth(300);
   cpWidget->setLayout(controlPanel);
   controlPanel->addWidget(_lblColorBy);
+  controlPanel->addWidget(_lblCamera);
   controlPanel->addWidget(pointSizeSlider);
   controlPanel->addSpacing(20);
   controlPanel->addWidget(cbColorMode);
+  controlPanel->addSpacing(20);
+  controlPanel->addWidget(cbCamera);
   controlPanel->addSpacing(40);
   controlPanel->addWidget(new QLabel(tr("Camera angles")));
   controlPanel->addWidget(xSlider);
@@ -186,8 +200,8 @@ Viewer::Viewer(const QString& configPath)
   _updatePointSize(1);
   cbColorMode->setCurrentIndex(0);
 
-  _camera->setPosition(QVector3D(0, -0.1, -0.2));
-  _camera->rotate(0, 50, 0);
+  _camera->setPosition(QVector3D(0, 0.0, 0.0));
+  _camera->rotate(0, 0, 0);
   _scene->setColorAxisMode(Scene::COLOR_BY_Z);
   _scene->setPickpointEnabled(false);
 }

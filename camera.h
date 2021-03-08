@@ -67,6 +67,7 @@ private:
   int _yRotation;
   int _zRotation;
 
+
   void _notify() {emit changed(state());}
 
 };
