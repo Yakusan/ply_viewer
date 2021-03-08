@@ -103,51 +103,62 @@ void Scene::_loadPLY(const QString& plyFilePath) {
 void Scene::_loadBundle(const QString& bundleFilePath)
 {
     int nbCam;
-    float r[16], k[16];
-    memset(r, 0, sizeof(float)*16);
-
     // open stream
     std::fstream is;
     is.open(bundleFilePath.toStdString().c_str(), std::fstream::in);
 
     // ensure format with magic header
     std::string line;
+    std::string delimiter = " ";
     std::getline(is, line);
     if (line != "# Bundle file v0.3") {
-      throw std::runtime_error("not a bundle file");
+        throw std::runtime_error("not a bundle file");
     }
 
     std::getline(is, line);
     std::stringstream ss(line);
     ss >> nbCam;
     for (int i = 0; i < nbCam ; i++) {
+        float r[16], k[16];
+        memset(r, 0, sizeof(float)*16);
+        memset(k, 0, sizeof(float)*16);
+
         std::getline(is, line);
-        ss.str(line);
-        ss >> k[0];
+        std::string token;
+        size_t pos = 0;
+        pos = line.find(delimiter);
+        token = line.substr(0,pos);
+        k[0] = stof(token);
         k[5] = k[0];
         k[2] = 1416.;
         k[6] = 1064.;
         k[10] = 1.;
-        std::getline(is, line);
-        ss.str(line);
-        ss >> r[0] >> r[1] >> r[2];
-        std::getline(is, line);
-        ss.str(line);
-        ss >> r[4] >> r[5] >> r[6];
-        std::getline(is, line);
-        ss.str(line);
-        ss >> r[8] >> r[9] >> r[10];
-        std::getline(is, line);
-        ss.str(line);
-        //ss >> r[3] >> r[7] >> r[11];
+
+        for (int j = 0; j < 3; j++) {
+            int l = 0;
+            pos = 0;
+            std::getline(is, line);
+            while ((pos = line.find(delimiter)) != std::string::npos) {
+                token = line.substr(0, pos);
+                qDebug() << stof(token);
+                r[j*4+l] = stof(token);
+                line.erase(0, pos + delimiter.length());
+                l++;
+            }
+            r[j*4+l] = stof(line);
+        }
         r[15] = 1.;
+
+        std::getline(is, line);
+        ss.str(line);
+        ss >> r[3] >> r[7] >> r[11];
+
         QMatrix4x4 R(r);
         QMatrix4x4 K(k);
+
+        qDebug() << R;
+        qDebug() << K;
         _listcamera.append(R);
-        for (int j=0; j<16; j++) {
-            printf("%lf ", r[j]);
-        }
-        printf("\n");
     }
 }
 
