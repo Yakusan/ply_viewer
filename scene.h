@@ -23,7 +23,9 @@ public:
 
   Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent = 0);
   ~Scene();
-
+  QVector<QMatrix4x4> _listcamera;
+  QMatrix4x4 _cameraMatrix;
+  int index;
 
 public slots:
   void setPointSize(size_t size);
@@ -67,10 +69,8 @@ private:
   QOpenGLBuffer _vertexBuffer;
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
-  QVector<QMatrix4x4> _listcamera;
   QVector<QMatrix4x4> _listperspective;
   QMatrix4x4 _projectionMatrix;
-  QMatrix4x4 _cameraMatrix;
   QMatrix4x4 _worldMatrix;
 
   QVector<float> _pointsData;

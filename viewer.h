@@ -34,5 +34,5 @@ private:
   QSharedPointer<Camera> _camera;
   QLabel* _lblColorBy;
   QLabel* _lblDistanceInfo;
-
+  QLabel* _lblCamera;
 };
