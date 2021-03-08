@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include <sstream>
 #include <limits>
 
@@ -113,6 +114,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     std::string line;
     std::string delimiter = " ";
     std::getline(is, line);
+    qDebug() << line.c_str();
     if (line != "# Bundle file v0.3") {
         throw std::runtime_error("not a bundle file");
     }
@@ -120,42 +122,55 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     std::getline(is, line);
     std::stringstream ss(line);
     ss >> nbCam;
+    qDebug() << nbCam;
+
+    float r[16];
+    float k[16];
+
+
     for (int i = 0; i < nbCam ; i++) {
-        float r[16], k[16];
-        memset(r, 0, sizeof(float)*16);
-        memset(k, 0, sizeof(float)*16);
+        float tmp[3];
+        std::memset(r, 0, sizeof(r));
+        std::memset(k, 0, sizeof(k));
 
         std::getline(is, line);
-        std::string token;
-        size_t pos = 0;
-        pos = line.find(delimiter);
-        token = line.substr(0,pos);
-        k[0] = stof(token);
+        ss.str(line);
+
+        ss >> tmp[0];
+
+        k[0] = tmp[0];
         k[5] = k[0];
-        k[2] = 1416.;
-        k[6] = 1064.;
-        k[10] = 1.;
+        k[2] = 1416.f;
+        k[6] = 1064.f;
+        k[10] = 1.f;
+
+        std::cerr << line.c_str() << std::endl;
+        std::cerr << tmp[0] << std::endl;
 
         for (int j = 0; j < 3; j++) {
-            int l = 0;
-            pos = 0;
             std::getline(is, line);
-            while ((pos = line.find(delimiter)) != std::string::npos) {
-                token = line.substr(0, pos);
-                r[j*4+l] = stof(token);
-                line.erase(0, pos + delimiter.length());
-                l++;
-            }
-            r[j*4+l] = stof(line);
+            ss.str(line);
+
+            ss >> tmp[0] >> tmp[1] >> tmp[2];
+            r[j * 4    ] = tmp[0];
+            r[j * 4 + 1] = tmp[1];
+            r[j * 4 + 2] = tmp[2];
         }
         r[15] = 1.;
 
         std::getline(is, line);
         ss.str(line);
-        ss >> r[3] >> r[7] >> r[11];
+        ss >> tmp[0] >> tmp[1] >> tmp[2];
+
+        r[3]  = tmp[0];
+        r[7]  = tmp[1];
+        r[11] = tmp[2];
+
+        for(int i = 0 ; i < 4 ; ++i)
+          qDebug() << r[i * 4] << " " << r[i * 4 + 1] << " " << r[i * 4 + 2] << " " << r[i * 4 + 3];
 
         QMatrix4x4 R(r);
-        //QMatrix4x4 K(k);
+        QMatrix4x4 K(k);
 
         _listcamera.append(R.inverted());
     }

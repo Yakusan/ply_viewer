@@ -206,6 +206,15 @@ Viewer::Viewer(const QString& configPath)
   _scene->setPickpointEnabled(false);
 }
 
+Viewer::~Viewer()
+{
+    if(_scene)
+    {
+        delete _scene;
+        _scene = nullptr;
+    }
+}
+
 
 void Viewer::wheelEvent(QWheelEvent* e) {
   if (e->angleDelta().y() > 0) {
