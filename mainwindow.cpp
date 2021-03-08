@@ -35,7 +35,7 @@ MainWindow::MainWindow()
   fileMenu->addAction(closeView);
   connect(closeView, &QAction::triggered, this, &MainWindow::_closeView);
 
-  // take first command line argument as a path to PLY files
+  // take first command line argument as a path to CONFIG files
   if (QApplication::arguments().size() > 1) {
     _openView(QApplication::arguments()[1]);
   } else {
@@ -69,21 +69,21 @@ MainWindow::MainWindow()
 
 void MainWindow::_openFileDialog()
 {
-  const QString filePath = QFileDialog::getOpenFileName(this, tr("Open PLY file"), "", tr("PLY Files (*.ply)"));
+  const QString filePath = QFileDialog::getOpenFileName(this, tr("Open config file"), "", tr("CONFIG Files (config.txt)"));
   if (!filePath.isEmpty()) {
     _openView(filePath);
   }
 }
 
 
-void MainWindow::_openView(const QString& filePath) {
+void MainWindow::_openView(const QString& configPath) {
   _closeView();
 
   try {
     // create new new
-    setCentralWidget(new Viewer(filePath));
+    setCentralWidget(new Viewer(configPath));
     // add source path into title
-    setWindowTitle(QString("%1 - %2").arg(filePath).arg(TITLE));
+    setWindowTitle(QString("%1 - %2").arg(configPath).arg(TITLE));
   } catch (const std::exception& e) {
     QMessageBox::warning(this, tr("Cannot open view"), e.what());
   }

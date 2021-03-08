@@ -16,7 +16,7 @@ class Viewer : public QWidget
 
 public:
 
-  Viewer(const QString& filePath);
+  Viewer(const QString& configPath);
 
 
 protected:
@@ -30,7 +30,6 @@ private slots:
 
 
 private:
-
   Scene* _scene;
   QSharedPointer<Camera> _camera;
   QLabel* _lblColorBy;

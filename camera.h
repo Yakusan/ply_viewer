@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QVector3D>
+#include <QMatrix4x4>
 
 struct CameraState {
   CameraState(const QVector3D& position_, const QVector3D& rotation_,
@@ -14,6 +15,7 @@ struct CameraState {
 
   const QVector3D position;
   const QVector3D rotation;
+  const QMatrix4x4 projection;
   const double frontClippingDistance;
   const double rearClippingDistance;
 };

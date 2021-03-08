@@ -15,13 +15,14 @@
 
 const size_t POINT_STRIDE = 4; // x, y, z, index
 
-Scene::Scene(const QString& plyFilePath, QWidget* parent)
+Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent)
   : QOpenGLWidget(parent),
     _pointSize(1),
     _colorMode(COLOR_BY_Z)
 {
   _pickpointEnabled = false;
   _loadPLY(plyFilePath);
+  _loadBundle(bundlePath);
   setMouseTracking(true);
 
   // make trivial axes cross
@@ -99,6 +100,67 @@ void Scene::_loadPLY(const QString& plyFilePath) {
 }
 
 
+void Scene::_loadBundle(const QString& bundleFilePath)
+{
+    int nbCam;
+    // open stream
+    std::fstream is;
+    is.open(bundleFilePath.toStdString().c_str(), std::fstream::in);
+
+    // ensure format with magic header
+    std::string line;
+    std::string delimiter = " ";
+    std::getline(is, line);
+    if (line != "# Bundle file v0.3") {
+        throw std::runtime_error("not a bundle file");
+    }
+
+    std::getline(is, line);
+    std::stringstream ss(line);
+    ss >> nbCam;
+    for (int i = 0; i < nbCam ; i++) {
+        float r[16], k[16];
+        memset(r, 0, sizeof(float)*16);
+        memset(k, 0, sizeof(float)*16);
+
+        std::getline(is, line);
+        std::string token;
+        size_t pos = 0;
+        pos = line.find(delimiter);
+        token = line.substr(0,pos);
+        k[0] = stof(token);
+        k[5] = k[0];
+        k[2] = 1416.;
+        k[6] = 1064.;
+        k[10] = 1.;
+
+        for (int j = 0; j < 3; j++) {
+            int l = 0;
+            pos = 0;
+            std::getline(is, line);
+            while ((pos = line.find(delimiter)) != std::string::npos) {
+                token = line.substr(0, pos);
+                qDebug() << stof(token);
+                r[j*4+l] = stof(token);
+                line.erase(0, pos + delimiter.length());
+                l++;
+            }
+            r[j*4+l] = stof(line);
+        }
+        r[15] = 1.;
+
+        std::getline(is, line);
+        ss.str(line);
+        ss >> r[3] >> r[7] >> r[11];
+
+        QMatrix4x4 R(r);
+        //QMatrix4x4 K(k);
+
+        _listcamera.append(R);
+    }
+}
+
+
 Scene::~Scene()
 {
   _cleanup();
@@ -169,11 +231,14 @@ void Scene::paintGL()
   //
   const CameraState camera = _currentCamera->state();
   // position and angles
-  _cameraMatrix.setToIdentity();
-  _cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
-  _cameraMatrix.rotate(camera.rotation.x(), 1, 0, 0);
-  _cameraMatrix.rotate(camera.rotation.y(), 0, 1, 0);
-  _cameraMatrix.rotate(camera.rotation.z(), 0, 0, 1);
+
+
+  //_cameraMatrix.setToIdentity();
+  _cameraMatrix = _listcamera.at(0);
+  //_projectionMatrix = _listperspective.at(0);
+  //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
+
+
 
   // set clipping planes
   glEnable(GL_CLIP_PLANE1);

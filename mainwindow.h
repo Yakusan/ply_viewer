@@ -11,6 +11,6 @@ public:
 
 protected slots:
   void _openFileDialog();
-  void _openView(const QString& plyPath);
+  void _openView(const QString& configPath);
   void _closeView();
 };

@@ -6,6 +6,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QMatrix4x4>
+#include <QMatrix3x3>
 #include <QVector3D>
 #include <QSharedPointer>
 
@@ -20,7 +21,7 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
 public:
   enum colorAxisMode {COLOR_BY_ROW, COLOR_BY_Z};
 
-  Scene(const QString& plyFilePath, QWidget* parent = 0);
+  Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent = 0);
   ~Scene();
 
 
@@ -50,6 +51,7 @@ private slots:
 
 private:
   void _loadPLY(const QString& plyFilePath);
+  void _loadBundle(const QString& bundleFilePath);
   void _cleanup();
   void _drawFrameAxis();
   QVector3D _unproject(int x, int y) const;
@@ -65,6 +67,8 @@ private:
   QOpenGLBuffer _vertexBuffer;
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
+  QVector<QMatrix4x4> _listcamera;
+  QVector<QMatrix4x4> _listperspective;
   QMatrix4x4 _projectionMatrix;
   QMatrix4x4 _cameraMatrix;
   QMatrix4x4 _worldMatrix;

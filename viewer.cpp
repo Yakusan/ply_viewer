@@ -10,12 +10,17 @@
 #include <QGroupBox>
 #include <QCheckBox>
 #include <QSlider>
+#include <QMatrix3x3>
+#include <QVector3D>
 
 #include "camera.h"
 #include "scene.h"
 #include "viewer.h"
 
 #include <cassert>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 
 
@@ -29,16 +34,23 @@ QSlider* createAnglecontrolSlider()
 }
 
 
-Viewer::Viewer(const QString& filePath)
+Viewer::Viewer(const QString& configPath)
 {
   // accept keyboard input
   setFocusPolicy(Qt::StrongFocus);
   setFocus();
+  QFile config;
+  config.setFileName(configPath);
+  config.open(QIODevice::ReadOnly);
+  QString buff = config.readAll();
+  QStringList list = buff.split('\n');
+  QString plyPath = list[0];
+  QString bundlePath = list[1];
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(filePath);
+  _scene = new Scene(plyPath, bundlePath);
   connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
