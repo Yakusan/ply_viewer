@@ -154,10 +154,8 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         ss >> r[3] >> r[7] >> r[11];
 
         QMatrix4x4 R(r);
-        QMatrix4x4 K(k);
+        //QMatrix4x4 K(k);
 
-        qDebug() << R;
-        qDebug() << K;
         _listcamera.append(R);
     }
 }
@@ -237,6 +235,7 @@ void Scene::paintGL()
 
   //_cameraMatrix.setToIdentity();
   _cameraMatrix = _listcamera.at(0);
+  //_projectionMatrix = _listperspective.at(0);
   //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
 
 
