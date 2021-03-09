@@ -69,7 +69,6 @@ private:
   QOpenGLBuffer _vertexBuffer;
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
-  QVector<QMatrix4x4> _listperspective;
   QMatrix4x4 _projectionMatrix;
   QMatrix4x4 _worldMatrix;
 
