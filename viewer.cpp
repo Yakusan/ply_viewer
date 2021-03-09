@@ -95,7 +95,7 @@ Viewer::Viewer(const QString& configPath)
 
   _lblCamera = new QLabel();
   auto cbCamera = new QComboBox();
-  for (int i = 0; i < _scene->_listcamera.length(); i++) {
+  for (int i = 0; i < _scene->_listView.length(); i++) {
       cbCamera->addItem(QString("Camera" + QString(i)));
   }
   connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
