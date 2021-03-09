@@ -72,30 +72,24 @@ void Scene::_loadPLY(const QString& plyFilePath) {
   if (_pointsCount > 0) {
     _pointsData.resize(_pointsCount * POINT_STRIDE);
 
-    std::string line;
-    std::string delimiter = " ";
-    float pt[9];
+    std::stringstream ss;
     float *p = _pointsData.data();
     for (size_t i = 0; is.good() && i < _pointsCount; ++i) {
+      float x, y, z, nx, ny, nz, r, g, b;
       std::getline(is, line);
-      std::string token;
-      size_t pos = 0;
-      int l = 0;
-      while ((pos = line.find(delimiter)) != std::string::npos) {
-          token = line.substr(0, pos);
-          pt[l] = stof(token);
-          line.erase(0, pos + delimiter.length());
-          l++;
-      }
-      pt[l] = stof(line);
+      ss.str(line);
 
-      *p++ = pt[0];
-      *p++ = pt[1];
-      *p++ = pt[2];
+      ss >> x >> y >> z >> nx >> ny >> nz >> r >> g >> b;
+
+      *p++ = x;
+      *p++ = y;
+      *p++ = z;
       *p++ = i;
-      *p++ = pt[6]/255.;
-      *p++ = pt[7]/255.;
-      *p++ = pt[8]/255.;
+      *p++ = r/255.;
+      *p++ = g/255.;
+      *p++ = b/255.;
+
+      ss.clear();
 
       // update bounds
       _pointsBoundMax[0] = std::max(x, _pointsBoundMax[0]);
@@ -105,7 +99,6 @@ void Scene::_loadPLY(const QString& plyFilePath) {
       _pointsBoundMin[1] = std::min(y, _pointsBoundMin[1]);
       _pointsBoundMin[2] = std::min(z, _pointsBoundMin[2]);
 
-      ss.clear();
     }
 
     // check if we've got exact number of points mentioned in header
@@ -134,7 +127,6 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     std::getline(is, line);
     std::stringstream ss(line);
     ss >> nbCam;
-    qDebug() << nbCam;
 
     float tmp[3];
     float r[16];
@@ -181,9 +173,6 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         r[3]  = tmp[0];
         r[7]  = tmp[1];
         r[11] = tmp[2];
-
-        for(int i = 0 ; i < 4 ; ++i)
-          qDebug() << r[i * 4] << " " << r[i * 4 + 1] << " " << r[i * 4 + 2] << " " << r[i * 4 + 3];
 
         QMatrix4x4 R(r);
         QMatrix4x4 K(k);
