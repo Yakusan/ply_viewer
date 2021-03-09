@@ -132,20 +132,15 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     std::stringstream ss(line);
     ss >> nbCam;
     for (int i = 0; i < nbCam ; i++) {
-        float r[16], k[16];
+        float r[16], k;
         memset(r, 0, sizeof(float)*16);
-        memset(k, 0, sizeof(float)*16);
 
         std::getline(is, line);
         std::string token;
         size_t pos = 0;
         pos = line.find(delimiter);
         token = line.substr(0,pos);
-        k[0] = stof(token);
-        k[5] = k[0];
-        k[2] = 1416.;
-        k[6] = 1064.;
-        k[10] = 1.;
+        k = stof(token);
 
         for (int j = 0; j < 3; j++) {
             int l = 0;
@@ -162,11 +157,17 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         r[15] = 1.;
 
         std::getline(is, line);
-        ss.str(line);
-        ss >> r[3] >> r[7] >> r[11];
+        int l = 0;
+        pos = 0;
+        while ((pos = line.find(delimiter)) != std::string::npos) {
+            token = line.substr(0, pos);
+            r[3+l] = -stof(token);
+            line.erase(0, pos + delimiter.length());
+            l += 4;
+        }
+        r[3+l] = -stof(line);
 
         QMatrix4x4 R(r);
-        //QMatrix4x4 K(k);
 
         _listcamera.append(R.inverted());
     }
@@ -341,8 +342,20 @@ void Scene::_drawFrameAxis() {
 
 void Scene::resizeGL(int w, int h)
 {
-  _projectionMatrix.setToIdentity();
-  _projectionMatrix.perspective(70.0f, GLfloat(w) / h, 0.01f, 100.0f);
+  float aspect = GLfloat(w) / h;
+  float k[16];
+  memset(k, 0, sizeof(float)*16);
+  k[0] = 2.875/aspect;
+  k[5] = 2.875;
+  k[10] = (0.01f + 100.0f) / (0.01f - 100.0f);
+  k[11] = (2. * 100.0f * 0.01f) / (0.01f - 100.0f);
+  k[14] = -1.;
+
+  QMatrix4x4 K(k);
+  _projectionMatrix = K;
+  qDebug() << _projectionMatrix;
+  //_projectionMatrix.perspective(_listfocal.at(index), GLfloat(w) / h, 0.01f, 100.0f);
+  //update();
 }
 
 
