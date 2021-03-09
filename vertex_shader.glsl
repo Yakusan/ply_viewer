@@ -5,8 +5,10 @@ uniform mat4 viewMatrix;
 
 attribute vec4 vertex;
 attribute float pointRowIndex;
+attribute vec3 color;
 
 varying float pointIdx;
+varying vec3 vcolor;
 varying vec3 vert;
 
 void main() {
@@ -15,5 +17,6 @@ void main() {
 
   // for use in fragment shader
   pointIdx = pointRowIndex;
+  vcolor = color;
   vert = vertex.xyz;
 }

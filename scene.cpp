@@ -13,7 +13,7 @@
 #include <sstream>
 #include <limits>
 
-const size_t POINT_STRIDE = 4; // x, y, z, index
+const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
 
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent)
   : QOpenGLWidget(parent),
@@ -71,27 +71,38 @@ void Scene::_loadPLY(const QString& plyFilePath) {
   if (_pointsCount > 0) {
     _pointsData.resize(_pointsCount * POINT_STRIDE);
 
-    std::stringstream ss;
     std::string line;
+    std::string delimiter = " ";
+    float pt[9];
     float *p = _pointsData.data();
     for (size_t i = 0; is.good() && i < _pointsCount; ++i) {
       std::getline(is, line);
-      ss.str(line);
-      float x, y, z;
-      ss >> x >> y >> z;
+      std::string token;
+      size_t pos = 0;
+      int l = 0;
+      while ((pos = line.find(delimiter)) != std::string::npos) {
+          token = line.substr(0, pos);
+          pt[l] = stof(token);
+          line.erase(0, pos + delimiter.length());
+          l++;
+      }
+      pt[l] = stof(line);
 
-      *p++ = x;
-      *p++ = y;
-      *p++ = z;
+      *p++ = pt[0];
+      *p++ = pt[1];
+      *p++ = pt[2];
       *p++ = i;
+      *p++ = pt[6]/255.;
+      *p++ = pt[7]/255.;
+      *p++ = pt[8]/255.;
 
       // update bounds
-      _pointsBoundMax[0] = std::max(x, _pointsBoundMax[0]);
-      _pointsBoundMax[1] = std::max(y, _pointsBoundMax[1]);
-      _pointsBoundMax[2] = std::max(z, _pointsBoundMax[2]);
-      _pointsBoundMin[0] = std::min(x, _pointsBoundMin[0]);
-      _pointsBoundMin[1] = std::min(y, _pointsBoundMin[1]);
-      _pointsBoundMin[2] = std::min(z, _pointsBoundMin[2]);
+      _pointsBoundMax[0] = std::max(pt[0], _pointsBoundMax[0]);
+      _pointsBoundMax[1] = std::max(pt[1], _pointsBoundMax[1]);
+      _pointsBoundMax[2] = std::max(pt[2], _pointsBoundMax[2]);
+      _pointsBoundMin[0] = std::min(pt[0], _pointsBoundMin[0]);
+      _pointsBoundMin[1] = std::min(pt[1], _pointsBoundMin[1]);
+      _pointsBoundMin[2] = std::min(pt[2], _pointsBoundMin[2]);
     }
 
     // check if we've got exact number of points mentioned in header
@@ -197,6 +208,7 @@ void Scene::initializeGL()
   // vector attributes
   _shaders->bindAttributeLocation("vertex", 0);
   _shaders->bindAttributeLocation("pointRowIndex", 1);
+  _shaders->bindAttributeLocation("color", 2);
   // constants
   _shaders->bind();
   _shaders->setUniformValue("lightPos", QVector3D(0, 0, 50));
@@ -213,8 +225,13 @@ void Scene::initializeGL()
   QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
   f->glEnableVertexAttribArray(0);
   f->glEnableVertexAttribArray(1);
-  f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(GLfloat) + sizeof(GLfloat), 0);
-  f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 3*sizeof(GLfloat) + sizeof(GLfloat), reinterpret_cast<void *>(3*sizeof(GLfloat)));
+  f->glEnableVertexAttribArray(2);
+  GLintptr vertex_offset = 0 * sizeof(float);
+  GLintptr pointRowIndex_offset = 3 * sizeof(float);
+  GLintptr color_offset = 4 * sizeof(float);
+  f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)vertex_offset);
+  f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)pointRowIndex_offset);
+  f->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)color_offset);
   _vertexBuffer.release();
 
 }
@@ -231,8 +248,6 @@ void Scene::paintGL()
   //
   const CameraState camera = _currentCamera->state();
   // position and angles
-
-  qDebug() << index << "paint gl pass";
   _cameraMatrix = _listcamera.at(index);
 
 
@@ -259,6 +274,7 @@ void Scene::paintGL()
   _shaders->setUniformValue("viewMatrix", viewMatrix);
   _shaders->setUniformValue("pointSize", _pointSize);
   _shaders->setUniformValue("colorAxisMode", static_cast<GLfloat>(_colorMode));
+  _shaders->setUniformValue("color", QVector3D(1.,0.,0.));
   _shaders->setUniformValue("pointsBoundMin", _pointsBoundMin);
   _shaders->setUniformValue("pointsBoundMax", _pointsBoundMax);
   glDrawArrays(GL_POINTS, 0, _pointsData.size());
@@ -404,8 +420,6 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
     update();
   }
 }
-
-
 
 
 void Scene::setPointSize(size_t size) {
