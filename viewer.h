@@ -17,6 +17,7 @@ class Viewer : public QWidget
 public:
 
   Viewer(const QString& configPath);
+  ~Viewer();
 
 
 protected:

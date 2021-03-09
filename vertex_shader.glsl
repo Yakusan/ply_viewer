@@ -1,7 +1,7 @@
 #version 120
 
 uniform float pointSize;
-uniform mat4 viewMatrix;
+uniform mat4 mvpMatrix;
 
 attribute vec4 vertex;
 attribute float pointRowIndex;
@@ -12,7 +12,7 @@ varying vec3 vcolor;
 varying vec3 vert;
 
 void main() {
-  gl_Position = viewMatrix * vertex;
+  gl_Position = mvpMatrix * vertex;
   gl_PointSize  = pointSize;
 
   // for use in fragment shader

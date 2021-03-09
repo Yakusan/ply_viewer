@@ -95,8 +95,8 @@ Viewer::Viewer(const QString& configPath)
 
   _lblCamera = new QLabel();
   auto cbCamera = new QComboBox();
-  for (int i = 0; i < _scene->_listcamera.length(); i++) {
-      cbCamera->addItem(QString("Camera" + QString::number(i)));
+  for (int i = 0; i < _scene->_listView.length(); i++) {
+      cbCamera->addItem(QString("Camera" + QString(i)));
   }
   connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
      _scene->index = newValue;
@@ -204,6 +204,15 @@ Viewer::Viewer(const QString& configPath)
   _camera->rotate(0, 0, 0);
   _scene->setColorAxisMode(Scene::COLOR_BY_Z);
   _scene->setPickpointEnabled(false);
+}
+
+Viewer::~Viewer()
+{
+    if(_scene)
+    {
+        delete _scene;
+        _scene = nullptr;
+    }
 }
 
 

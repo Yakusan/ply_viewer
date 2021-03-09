@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include <sstream>
 #include <limits>
 
@@ -24,7 +25,7 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* par
   _loadPLY(plyFilePath);
   _loadBundle(bundlePath);
   index = 0;
-  _cameraMatrix = _listcamera.at(0);
+  _viewMatrix = _listView.at(0);
   setMouseTracking(true);
 
   // make trivial axes cross
@@ -97,12 +98,14 @@ void Scene::_loadPLY(const QString& plyFilePath) {
       *p++ = pt[8]/255.;
 
       // update bounds
-      _pointsBoundMax[0] = std::max(pt[0], _pointsBoundMax[0]);
-      _pointsBoundMax[1] = std::max(pt[1], _pointsBoundMax[1]);
-      _pointsBoundMax[2] = std::max(pt[2], _pointsBoundMax[2]);
-      _pointsBoundMin[0] = std::min(pt[0], _pointsBoundMin[0]);
-      _pointsBoundMin[1] = std::min(pt[1], _pointsBoundMin[1]);
-      _pointsBoundMin[2] = std::min(pt[2], _pointsBoundMin[2]);
+      _pointsBoundMax[0] = std::max(x, _pointsBoundMax[0]);
+      _pointsBoundMax[1] = std::max(y, _pointsBoundMax[1]);
+      _pointsBoundMax[2] = std::max(z, _pointsBoundMax[2]);
+      _pointsBoundMin[0] = std::min(x, _pointsBoundMin[0]);
+      _pointsBoundMin[1] = std::min(y, _pointsBoundMin[1]);
+      _pointsBoundMin[2] = std::min(z, _pointsBoundMin[2]);
+
+      ss.clear();
     }
 
     // check if we've got exact number of points mentioned in header
@@ -122,8 +125,8 @@ void Scene::_loadBundle(const QString& bundleFilePath)
 
     // ensure format with magic header
     std::string line;
-    std::string delimiter = " ";
     std::getline(is, line);
+    qDebug() << line.c_str();
     if (line != "# Bundle file v0.3") {
         throw std::runtime_error("not a bundle file");
     }
@@ -131,45 +134,61 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     std::getline(is, line);
     std::stringstream ss(line);
     ss >> nbCam;
+    qDebug() << nbCam;
+
+    float tmp[3];
+    float r[16];
+    float k[16];
+
+
+    ss.clear();
     for (int i = 0; i < nbCam ; i++) {
-        float r[16], k;
-        memset(r, 0, sizeof(float)*16);
+        std::memset(r, 0, sizeof(r));
+        std::memset(k, 0, sizeof(k));
 
         std::getline(is, line);
-        std::string token;
-        size_t pos = 0;
-        pos = line.find(delimiter);
-        token = line.substr(0,pos);
-        k = stof(token);
+        ss.str(line);
 
+        ss >> tmp[0];
+
+        k[0] = tmp[0];
+        k[5] = k[0];
+        k[2] = 1416.f;
+        k[6] = 1064.f;
+        k[10] = 1.f;
+
+        std::cerr << line.c_str() << std::endl;
+        std::cerr << tmp[0] << std::endl;
+
+        ss.clear();
         for (int j = 0; j < 3; j++) {
-            int l = 0;
-            pos = 0;
             std::getline(is, line);
-            while ((pos = line.find(delimiter)) != std::string::npos) {
-                token = line.substr(0, pos);
-                r[j*4+l] = stof(token);
-                line.erase(0, pos + delimiter.length());
-                l++;
-            }
-            r[j*4+l] = stof(line);
+            ss.str(line);
+
+            ss >> tmp[0] >> tmp[1] >> tmp[2];
+            r[j * 4    ] = tmp[0];
+            r[j * 4 + 1] = tmp[1];
+            r[j * 4 + 2] = tmp[2];
+
+           ss.clear();
         }
         r[15] = 1.;
 
         std::getline(is, line);
-        int l = 0;
-        pos = 0;
-        while ((pos = line.find(delimiter)) != std::string::npos) {
-            token = line.substr(0, pos);
-            r[3+l] = -stof(token);
-            line.erase(0, pos + delimiter.length());
-            l += 4;
-        }
-        r[3+l] = -stof(line);
+        ss.str(line);
+        ss >> tmp[0] >> tmp[1] >> tmp[2];
+
+        r[3]  = tmp[0];
+        r[7]  = tmp[1];
+        r[11] = tmp[2];
+
+        for(int i = 0 ; i < 4 ; ++i)
+          qDebug() << r[i * 4] << " " << r[i * 4 + 1] << " " << r[i * 4 + 2] << " " << r[i * 4 + 3];
 
         QMatrix4x4 R(r);
+        QMatrix4x4 K(k);
 
-        _listcamera.append(R.inverted());
+        _listView.append(R);
     }
 }
 
@@ -249,7 +268,9 @@ void Scene::paintGL()
   //
   const CameraState camera = _currentCamera->state();
   // position and angles
-  _cameraMatrix = _listcamera.at(index);
+
+  qDebug() << index << "paint gl pass";
+  _viewMatrix = _listView.at(index);
 
 
   //_projectionMatrix = _listperspective.at(0);
@@ -269,10 +290,10 @@ void Scene::paintGL()
   // draw points cloud
   //
   QOpenGLVertexArrayObject::Binder vaoBinder(&_vao);
-  const auto viewMatrix = _projectionMatrix * _cameraMatrix * _worldMatrix;
+  const auto viewMatrix = _projectionMatrix * _viewMatrix * _worldMatrix;
   _shaders->bind();
   _shaders->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
-  _shaders->setUniformValue("viewMatrix", viewMatrix);
+  _shaders->setUniformValue("mvpMatrix", viewMatrix);
   _shaders->setUniformValue("pointSize", _pointSize);
   _shaders->setUniformValue("colorAxisMode", static_cast<GLfloat>(_colorMode));
   _shaders->setUniformValue("color", QVector3D(1.,0.,0.));
@@ -287,7 +308,7 @@ void Scene::paintGL()
   glBegin(GL_LINES);
   glColor3f(1., 1., 0.);
   {
-    QMatrix4x4 mvMatrix = _cameraMatrix * _worldMatrix;
+    QMatrix4x4 mvMatrix = _viewMatrix * _worldMatrix;
     for (auto vertex : _pickedPoints) {
       const auto translated = _projectionMatrix * mvMatrix * vertex;
       glVertex3f(translated.x(), translated.y(), translated.z());
@@ -317,7 +338,7 @@ void Scene::_drawMarkerBox(const QVector3D& point, const QColor& color) {
     const float dx = 0.01;
     const auto aspect = (float)width() / height();
     const auto dy = dx*aspect;
-    const auto p = _projectionMatrix * _cameraMatrix * _worldMatrix * point;
+    const auto p = _projectionMatrix * _viewMatrix * _worldMatrix * point;
     glVertex3f(p.x()-dx, p.y()-dy, p.z());
     glVertex3f(p.x()+dx, p.y()-dy, p.z());
     glVertex3f(p.x()+dx, p.y()+dy, p.z());
@@ -329,7 +350,7 @@ void Scene::_drawMarkerBox(const QVector3D& point, const QColor& color) {
 
 void Scene::_drawFrameAxis() {
   glBegin(GL_LINES);
-  QMatrix4x4 mvMatrix = _cameraMatrix * _worldMatrix;
+  QMatrix4x4 mvMatrix = _viewMatrix * _worldMatrix;
   mvMatrix.scale(0.05); // make it small
   for (auto vertex : _axesLines) {
     const auto translated = _projectionMatrix * mvMatrix * vertex.first;
@@ -481,7 +502,7 @@ void Scene::clearPickedpoints() {
 QVector3D Scene::_unproject(int x, int y) const {
   // with Qt5.5 we can make use of new QVector3D::unproject()
 
-  const QMatrix4x4 mvMatrix = _projectionMatrix * _cameraMatrix * _worldMatrix;
+  const QMatrix4x4 mvMatrix = _projectionMatrix * _viewMatrix * _worldMatrix;
   const QMatrix4x4 inverted = mvMatrix.inverted();
 
   // normalized device coordinates

@@ -23,8 +23,8 @@ public:
 
   Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent = 0);
   ~Scene();
-  QVector<QMatrix4x4> _listcamera;
-  QMatrix4x4 _cameraMatrix;
+  QVector<QMatrix4x4> _listView;
+  QMatrix4x4 _viewMatrix;
   int index;
 
 public slots:
