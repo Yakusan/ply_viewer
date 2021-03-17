@@ -190,6 +190,9 @@ Scene::~Scene()
 
 void Scene::_cleanup()
 {
+  if(_shaders.isNull())
+    return;
+
   makeCurrent();
   _vertexBuffer.destroy();
   _shaders.reset();
