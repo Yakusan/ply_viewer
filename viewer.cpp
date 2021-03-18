@@ -46,11 +46,12 @@ Viewer::Viewer(const QString& configPath)
   QStringList list = buff.split('\n');
   QString plyPath = list[0];
   QString bundlePath = list[1];
+  int hImg = list[2].toInt();
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(plyPath, bundlePath);
+  _scene = new Scene(plyPath, bundlePath, hImg);
   connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
@@ -96,7 +97,7 @@ Viewer::Viewer(const QString& configPath)
   _lblCamera = new QLabel();
   auto cbCamera = new QComboBox();
   for (int i = 0; i < _scene->_listView.length(); i++) {
-      cbCamera->addItem(QString("Camera" + QString(i)));
+      cbCamera->addItem(QString("Camera " + QString::number(i)));
   }
   connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
      _scene->index = newValue;

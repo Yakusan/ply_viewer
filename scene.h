@@ -21,10 +21,9 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
 public:
   enum colorAxisMode {COLOR_BY_ROW, COLOR_BY_Z};
 
-  Scene(const QString& plyFilePath, const QString& bundlePath, QWidget* parent = 0);
+  Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, QWidget* parent = 0);
   ~Scene();
   QVector<QMatrix4x4> _listView;
-  QMatrix4x4 _viewMatrix;
   int index;
 
 public slots:
@@ -59,6 +58,7 @@ private:
   QVector3D _unproject(int x, int y) const;
   QVector3D _pickPointFrom2D(const QPoint& pos) const;
   void _drawMarkerBox(const QVector3D& point, const QColor& color);
+  QMatrix4x4 createPerspectiveMatrix(float fov_v, float aspect, float near, float far);
 
   float _pointSize;
   colorAxisMode _colorMode;
@@ -69,8 +69,12 @@ private:
   QOpenGLBuffer _vertexBuffer;
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
-  QMatrix4x4 _projectionMatrix;
-  QMatrix4x4 _worldMatrix;
+  int                 _hImg;
+  QVector<double>     _fov_v;
+  QVector<QMatrix4x4> _listProjection;
+  QMatrix4x4          _projectionMatrix;
+  QMatrix4x4          _viewMatrix;
+  QMatrix4x4          _worldMatrix;
 
   QVector<float> _pointsData;
   size_t _pointsCount;
