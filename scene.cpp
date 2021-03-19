@@ -119,7 +119,6 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     // ensure format with magic header
     std::string line;
     std::getline(is, line);
-    qDebug() << line.c_str();
     if (line != "# Bundle file v0.3") {
         throw std::runtime_error("not a bundle file");
     }
@@ -148,9 +147,6 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         k[2] = 1416.f;
         k[6] = 1064.f;
         k[10] = 1.f;
-
-        std::cerr << line.c_str() << std::endl;
-        std::cerr << tmp[0] << std::endl;
 
         ss.clear();
         for (int j = 0; j < 3; j++) {
@@ -258,11 +254,10 @@ void Scene::paintGL()
   const CameraState camera = _currentCamera->state();
   // position and angles
 
-  qDebug() << index << "paint gl pass";
   _viewMatrix = _listView.at(index);
 
 
-  //_projectionMatrix = _listperspective.at(0);
+  //_projectionMatrix = _listperspective.at(0text);
   //_cameraMatrix.translate(camera.position.x(), camera.position.y(), camera.position.z());
 
 
@@ -352,20 +347,36 @@ void Scene::_drawFrameAxis() {
 
 void Scene::resizeGL(int w, int h)
 {
-  float aspect = GLfloat(w) / h;
-  float k[16];
+  //float aspect = GLfloat(w) / h;
+  /*float k[16];
   memset(k, 0, sizeof(float)*16);
   k[0] = 2.875/aspect;
   k[5] = 2.875;
   k[10] = (0.01f + 100.0f) / (0.01f - 100.0f);
   k[11] = (2. * 100.0f * 0.01f) / (0.01f - 100.0f);
-  k[14] = -1.;
+  k[14] = -1.;*/
 
-  QMatrix4x4 K(k);
-  _projectionMatrix = K;
-  qDebug() << _projectionMatrix;
-  //_projectionMatrix.perspective(_listfocal.at(index), GLfloat(w) / h, 0.01f, 100.0f);
-  //update();
+  /*k[0] = 2999.99;
+  k[1] = 39.75;
+  k[2] = 1440.86;
+  k[3] = 5.97829;
+  k[4] = -19.7875;
+  k[5] = 2998.92;
+  k[6] = 1088.73;
+  k[7] = 5.27609;
+  k[8] = 0.00709174;
+  k[9] = 0.0083718;
+  k[10] = 0.99994;
+  k[11] = 0.0111142;
+  k[12] = 1.0;
+  k[13] = 1.0;
+  k[14] = 1.0;
+  k[15] = 1.0;*/
+
+
+  /*QMatrix4x4 K(k);
+  _projectionMatrix = K;*/
+  _projectionMatrix.perspective(39.178550065, float(w) / h, 0.1f, 100.0f);
 }
 
 
