@@ -12,6 +12,10 @@ QT += widgets
 
 CONFIG += c++11
 
+QMAKE_CXXFLAGS += -fopenmp
+
+LIBS += -fopenmp
+
 RESOURCES += \
     resources.qrc
 
@@ -25,3 +29,5 @@ INSTALLS += target
 data.path = /usr/share/pcviewer/lib
 data.files = /home/den/Qt5.5.1/5.5/gcc_64/lib/*
 INSTALLS += data
+
+DISTFILES +=

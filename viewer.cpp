@@ -24,12 +24,23 @@
 
 
 
-QSlider* createAnglecontrolSlider()
+QSlider* createPositioncontrolSlider()
 {
   QSlider* slider = new QSlider(Qt::Horizontal);
-  slider->setRange(0, 360 * Camera::RK);
-  slider->setSingleStep(Camera::RK);
-  slider->setPageStep(10 * Camera::RK);
+  slider->setRange(-150, 300);
+  slider->setValue(0);
+  slider->setSingleStep(1);
+  slider->setPageStep(10);
+  return slider;
+}
+
+QSlider* createSizecontrolSlider()
+{
+  QSlider* slider = new QSlider(Qt::Horizontal);
+  slider->setRange(1, 500);
+  slider->setValue(20);
+  slider->setSingleStep(1);
+  slider->setPageStep(10);
   return slider;
 }
 
@@ -46,11 +57,13 @@ Viewer::Viewer(const QString& configPath)
   QStringList list = buff.split('\n');
   QString plyPath = list[0];
   QString bundlePath = list[1];
+  int hImg = list[2].toInt();
+  int nbVox = list[3].toInt();
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(plyPath, bundlePath);
+  _scene = new Scene(plyPath, bundlePath, hImg, nbVox);
   connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
@@ -62,15 +75,18 @@ Viewer::Viewer(const QString& configPath)
   //
   // make camera controls
   //
-  auto xSlider = createAnglecontrolSlider();
-  auto ySlider = createAnglecontrolSlider();
-  auto zSlider = createAnglecontrolSlider();
-  connect(xSlider, SIGNAL(valueChanged(int)), _camera.data(), SLOT(setXRotation(int)));
-  connect(_camera.data(), SIGNAL(xRotationChanged(int)), xSlider, SLOT(setValue(int)));
-  connect(ySlider, SIGNAL(valueChanged(int)), _camera.data(), SLOT(setYRotation(int)));
-  connect(_camera.data(), SIGNAL(yRotationChanged(int)), ySlider, SLOT(setValue(int)));
-  connect(zSlider, SIGNAL(valueChanged(int)), _camera.data(), SLOT(setZRotation(int)));
-  connect(_camera.data(), SIGNAL(zRotationChanged(int)), zSlider, SLOT(setValue(int)));
+  auto xSlider = createPositioncontrolSlider();
+  auto ySlider = createPositioncontrolSlider();
+  auto zSlider = createPositioncontrolSlider();
+  connect(xSlider, SIGNAL(valueChanged(int)), _scene, SLOT(setxVoxT(int)));
+  connect(ySlider, SIGNAL(valueChanged(int)), _scene, SLOT(setyVoxT(int)));
+  connect(zSlider, SIGNAL(valueChanged(int)), _scene, SLOT(setzVoxT(int)));
+
+  //
+  //make voxels size slider
+  //
+  auto voxSizeSlider = createSizecontrolSlider();
+  connect(voxSizeSlider, SIGNAL(valueChanged(int)), _scene, SLOT(setVoxSize(int)));
 
   //
   // make 'point size' contoller
@@ -96,10 +112,17 @@ Viewer::Viewer(const QString& configPath)
   _lblCamera = new QLabel();
   auto cbCamera = new QComboBox();
   for (int i = 0; i < _scene->_listView.length(); i++) {
-      cbCamera->addItem(QString("Camera" + QString::number(i)));
+      cbCamera->addItem(QString("Camera " + QString::number(i)));
   }
   connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
      _scene->index = newValue;
+     _scene->_viewMatrix = _scene->_listView.at(_scene->index);
+     _scene->_xRotation = 0.;
+     _scene->_yRotation = 0.;
+     _scene->_zRotation = 0.;
+     _scene->_xTranslate = 0.;
+     _scene->_yTranslate = 0.;
+     _scene->_zTranslate = 0.;
      _scene->update();
   });
 
@@ -154,6 +177,16 @@ Viewer::Viewer(const QString& configPath)
   mtLayout->addWidget(_lblDistanceInfo);
 
   //
+  //make carve button
+  //
+  auto btnCarve = new QPushButton(tr("Carve"));
+  btnCarve->setMaximumWidth(100);
+  connect(btnCarve, &QPushButton::pressed, [=]() {
+      _scene->carve();
+  });
+
+
+  //
   // compose control panel
   //
   QWidget* cpWidget = new QWidget();
@@ -168,7 +201,10 @@ Viewer::Viewer(const QString& configPath)
   controlPanel->addSpacing(20);
   controlPanel->addWidget(cbCamera);
   controlPanel->addSpacing(40);
-  controlPanel->addWidget(new QLabel(tr("Camera angles")));
+  controlPanel->addWidget(new QLabel(tr("Voxels sizes")));
+  controlPanel->addWidget(voxSizeSlider);
+  controlPanel->addSpacing(20);
+  controlPanel->addWidget(new QLabel(tr("Voxels positions")));
   controlPanel->addWidget(xSlider);
   controlPanel->addWidget(ySlider);
   controlPanel->addWidget(zSlider);
@@ -180,6 +216,8 @@ Viewer::Viewer(const QString& configPath)
   controlPanel->addWidget(farClippingPlaneSlider);
   controlPanel->addSpacing(20);
   controlPanel->addWidget(gbMeasuringTool);
+  controlPanel->addSpacing(20);
+  controlPanel->addWidget(btnCarve);
   controlPanel->addStretch(2);
 
   //
@@ -233,38 +271,39 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
       break;
 
     case Qt::Key_Left:
-    case Qt::Key_A:
-      _camera->left();
+    case Qt::Key_Q:
+      _scene->_xTranslate += 0.01;
       break;
 
     case Qt::Key_Right:
     case Qt::Key_D:
-      _camera->right();
+      _scene->_xTranslate -= 0.01;
       break;
 
     case Qt::Key_Up:
-    case Qt::Key_W:
-      _camera->forward();
+    case Qt::Key_Z:
+      _scene->_yTranslate += 0.01;
       break;
 
     case Qt::Key_Down:
     case Qt::Key_S:
-      _camera->backward();
+      _scene->_yTranslate -= 0.01;
       break;
 
     case Qt::Key_Space:
-    case Qt::Key_Q:
-      _camera->up();
+    case Qt::Key_A:
+      _scene->_zTranslate += 0.01;
       break;
 
     case Qt::Key_C:
-    case Qt::Key_Z:
-      _camera->down();
+    case Qt::Key_E:
+      _scene->_zTranslate -= 0.01;
       break;
 
     default:
       QWidget::keyPressEvent(keyEvent);
   }
+  _scene->update();
 }
 
 
