@@ -5,6 +5,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
+#include <QOpenGLTexture>
 #include <QMatrix4x4>
 #include <QMatrix3x3>
 #include <QVector3D>
@@ -70,10 +71,12 @@ private:
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
   // ajouter photos
+  QOpenGLTexture * _photo;
   float _planVex[16];
-  unsigned int _planindex[4];
+  unsigned int _planIndex[4];
   QOpenGLVertexArrayObject _vaoPhotos;
   QOpenGLBuffer _vertexBufferPhotos;
+  QOpenGLBuffer  * _indexBufferPhotos;
   QScopedPointer<QOpenGLShaderProgram> _shadersPhotos;
 
   int                 _hImg;
