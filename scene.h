@@ -69,6 +69,13 @@ private:
   QOpenGLBuffer _vertexBuffer;
   QScopedPointer<QOpenGLShaderProgram> _shaders;
 
+  // ajouter photos
+  float _planVex[16];
+  unsigned int _planindex[4];
+  QOpenGLVertexArrayObject _vaoPhotos;
+  QOpenGLBuffer _vertexBufferPhotos;
+  QScopedPointer<QOpenGLShaderProgram> _shadersPhotos;
+
   int                 _hImg;
   QVector<double>     _fov_v;
   QVector<QMatrix4x4> _listProjection;

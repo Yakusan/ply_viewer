@@ -14,7 +14,7 @@
 #include <sstream>
 #include <limits>
 
-const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
+const size_t POINT_STRIDE =  6; // x, y, z, r, g, b
 
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, QWidget* parent)
   : QOpenGLWidget(parent),
@@ -89,7 +89,6 @@ void Scene::_loadPLY(const QString& plyFilePath) {
       *p++ = x;
       *p++ = y;
       *p++ = z;
-      *p++ = i;
       *p++ = r/255.;
       *p++ = g/255.;
       *p++ = b/255.;
@@ -239,12 +238,12 @@ void Scene::initializeGL()
   assert(vsLoaded && fsLoaded);
   // vector attributes
   _shaders->bindAttributeLocation("vertex", 0);
-  _shaders->bindAttributeLocation("pointRowIndex", 1);
-  _shaders->bindAttributeLocation("color", 2);
+  //_shaders->bindAttributeLocation("pointRowIndex", 1);
+  _shaders->bindAttributeLocation("color", 1 /*2*/);
   // constants
-  _shaders->bind();
-  _shaders->setUniformValue("lightPos", QVector3D(0, 0, 50));
-  _shaders->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
+  //_shaders->bind();
+  //_shaders->setUniformValue("lightPos", QVector3D(0, 0, 50));
+  //_shaders->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
   _shaders->link();
   _shaders->release();
 
@@ -257,15 +256,56 @@ void Scene::initializeGL()
   QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
   f->glEnableVertexAttribArray(0);
   f->glEnableVertexAttribArray(1);
-  f->glEnableVertexAttribArray(2);
+  //f->glEnableVertexAttribArray(2);
   GLintptr vertex_offset = 0 * sizeof(float);
-  GLintptr pointRowIndex_offset = 3 * sizeof(float);
-  GLintptr color_offset = 4 * sizeof(float);
-  f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)vertex_offset);
-  f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)pointRowIndex_offset);
-  f->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)color_offset);
+  //GLintptr pointRowIndex_offset = 3 * sizeof(float);
+  GLintptr color_offset = /*4*/ 3 * sizeof(float);
+  f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, POINT_STRIDE * sizeof(GLfloat), (GLvoid*)vertex_offset);
+  //f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, POINT_STRIDE * sizeof(GLfloat), (GLvoid*)pointRowIndex_offset);
+  f->glVertexAttribPointer(/*2*/1, 3, GL_FLOAT, GL_FALSE, POINT_STRIDE * sizeof(GLfloat), (GLvoid*)color_offset);
   _vertexBuffer.release();
 
+  //
+  // create shaders and map attributes photos
+  //
+  float planVex[] = {
+    // vertex pos ; texCoord
+    -1.0f,  1.0f, 0.0f, 1.0f, // 0
+    -1.0f, -1.0f, 0.0f, 0.0f, // 1
+     1.0f, -1.0f, 1.0f, 0.0f, // 2
+     1.0f,  1.0f, 1.0f, 1.0f  // 3
+  };
+
+  int index[] = { 0, 1, 2, 2, 3, 0 };
+
+
+  _shadersPhotos.reset(new QOpenGLShaderProgram());
+  vsLoaded = _shadersPhotos->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/photos_vertex_shader.glsl");
+  fsLoaded = _shadersPhotos->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/photos_fragment_shader.glsl");
+  assert(vsLoaded && fsLoaded);
+  // vector attributes
+  _shadersPhotos->bindAttributeLocation("vertex", 0);
+  _shadersPhotos->bindAttributeLocation("texCoord", 1);
+  // constants
+  _shadersPhotos->bind();
+  _shadersPhotos->setUniformValue("texColor", 0 );
+  _shadersPhotos->link();
+  _shadersPhotos->release();
+
+  // create array container and load points into buffer
+  _vaoPhotos.create();
+  QOpenGLVertexArrayObject::Binder vaoBinderPhotos(&_vaoPhotos);
+  _vertexBufferPhotos.create();
+  _vertexBufferPhotos.bind();
+  _vertexBufferPhotos.allocate(planVex, sizeof(placeholders));
+  f->glEnableVertexAttribArray(0);
+  f->glEnableVertexAttribArray(1);
+  vertex_offset = 0 * sizeof(float);
+  color_offset = /*4*/ 2 * sizeof(float);
+  f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)vertex_offset);
+  f->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)color_offset);
+  _vertexBufferPhotos.release();
+  // Rajouter EBO
 }
 
 void Scene::paintGL()
@@ -278,14 +318,14 @@ void Scene::paintGL()
   //
   // set camera
   //
-  const CameraState camera = _currentCamera->state();
+  //const CameraState camera = _currentCamera->state();
   // position and angles
 
   qDebug() << index << "paint gl pass";
   _viewMatrix = _listView.at(index);
   _projectionMatrix = _listProjection.at(index);
 
-
+/*
   // set clipping planes
   glEnable(GL_CLIP_PLANE1);
   glEnable(GL_CLIP_PLANE2);
@@ -293,23 +333,33 @@ void Scene::paintGL()
   glClipPlane(GL_CLIP_PLANE1 , rearClippingPlane);
   const double frontClippingPlane[] = {0., 0., 1., camera.frontClippingDistance};
   glClipPlane(GL_CLIP_PLANE2 , frontClippingPlane);
-
+*/
   //
   // draw points cloud
   //
   QOpenGLVertexArrayObject::Binder vaoBinder(&_vao);
   const auto viewMatrix = _projectionMatrix * _viewMatrix * _worldMatrix;
   _shaders->bind();
-  _shaders->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
+  //_shaders->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
   _shaders->setUniformValue("mvpMatrix", viewMatrix);
   _shaders->setUniformValue("pointSize", _pointSize);
-  _shaders->setUniformValue("colorAxisMode", static_cast<GLfloat>(_colorMode));
+  //_shaders->setUniformValue("colorAxisMode", static_cast<GLfloat>(_colorMode));
   _shaders->setUniformValue("color", QVector3D(1.,0.,0.));
-  _shaders->setUniformValue("pointsBoundMin", _pointsBoundMin);
-  _shaders->setUniformValue("pointsBoundMax", _pointsBoundMax);
+  //_shaders->setUniformValue("pointsBoundMin", _pointsBoundMin);
+  //_shaders->setUniformValue("pointsBoundMax", _pointsBoundMax);
   glDrawArrays(GL_POINTS, 0, _pointsData.size());
   _shaders->release();
 
+  //
+  // draw photos
+  //
+  QOpenGLVertexArrayObject::Binder vaoBinderPhotos(&_vaoPhotos);
+  _shadersPhotos->bind();
+  _shadersPhotos->setUniformValue("texColor", 0 );
+  glDrawElements(GL_TRIANGLES, 0,  GL_UNSIGNED_INT, 4);
+  _shadersPhotos->release();
+
+  /*
   //
   // draw picked points and line between
   //
@@ -335,7 +385,7 @@ void Scene::paintGL()
   }
 
   _drawFrameAxis();
-
+  */
 }
 
 
