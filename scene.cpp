@@ -4,7 +4,6 @@
 #include <QOpenGLShaderProgram>
 #include <QCoreApplication>
 #include <QScopedPointer>
-
 #include <cmath>
 #include <cassert>
 #include <iostream>
@@ -18,18 +17,13 @@ const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
 
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, int nbVox, QWidget* parent)
   : QOpenGLWidget(parent),
-    _pointSize(1),
-    _colorMode(COLOR_BY_Z)
+    _pointSize(1)
 {
-  _pickpointEnabled = false;
-
   _hImg = hImg;
   if (nbVox < 1)
       _nbVox = 32;
   else
       _nbVox = nbVox;
-
-  _voxSize = 0.02;
 
   _loadPLY(plyFilePath);
   _loadBundle(bundlePath);
@@ -39,22 +33,21 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, in
   _viewMatrix = _listView.at(0);
   _projectionMatrix = _listProjection.at(0);
   _indicesBufferVox = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+  _spaceSize = qMax(qMax(_pointsBoundMax[0] - _pointsBoundMin[0],_pointsBoundMax[1] - _pointsBoundMin[1]), _pointsBoundMax[2] - _pointsBoundMin[2]);
   _createVox();
 
   setMouseTracking(true);
-
-  // make trivial axes cross
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(1.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 1.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 1.0, 0.0), QColor(0.0, 1.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 0.0, 1.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 1.0), QColor(0.0, 0.0, 1.0)));
-
 }
 
 
 void Scene::_loadPLY(const QString& plyFilePath) {
+
+  _pointsBoundMax[0] = std::numeric_limits<float>::min();
+  _pointsBoundMax[1] = std::numeric_limits<float>::min();
+  _pointsBoundMax[2] = std::numeric_limits<float>::min();
+  _pointsBoundMin[0] = std::numeric_limits<float>::max();
+  _pointsBoundMin[1] = std::numeric_limits<float>::max();
+  _pointsBoundMin[2] = std::numeric_limits<float>::max();
 
   // open stream
   std::fstream is;
@@ -113,7 +106,6 @@ void Scene::_loadPLY(const QString& plyFilePath) {
       _pointsBoundMin[0] = std::min(x, _pointsBoundMin[0]);
       _pointsBoundMin[1] = std::min(y, _pointsBoundMin[1]);
       _pointsBoundMin[2] = std::min(z, _pointsBoundMin[2]);
-
     }
 
     // check if we've got exact number of points mentioned in header
@@ -192,16 +184,29 @@ void Scene::_loadBundle(const QString& bundleFilePath)
 }
 
 void Scene::_createVox() {
+    float voxSize = _spaceSize/_nbVox;
     _voxVertices = {
-        0.0f,_voxSize,0.0f,   //Point A 0
-        0.0f,_voxSize,_voxSize,    //Point B 1
-        _voxSize,_voxSize,0.0f,    //Point C 2
-        _voxSize,_voxSize,_voxSize,     //Point D 3
+        0.0f,voxSize,0.0f,   //Point A 0
+        0.0f,voxSize,voxSize,    //Point B 1
+        voxSize,voxSize,0.0f,    //Point C 2
+        voxSize,voxSize,voxSize,     //Point D 3
 
         0.0f,0.0f,0.0f,  //Point E 4
-        0.0f,0.0f,_voxSize,   //Point F 5
-        _voxSize,0.0f,0.0f,   //Point G 6
-        _voxSize,0.0f,_voxSize,    //Point H 7
+        0.0f,0.0f,voxSize,   //Point F 5
+        voxSize,0.0f,0.0f,   //Point G 6
+        voxSize,0.0f,voxSize,    //Point H 7
+    };
+
+    _spaceVertices = {
+        0.0f,_spaceSize,0.0f,   //Point A 0
+        0.0f,_spaceSize,_spaceSize,    //Point B 1
+        _spaceSize,_spaceSize,0.0f,    //Point C 2
+        _spaceSize,_spaceSize,_spaceSize,     //Point D 3
+
+        0.0f,0.0f,0.0f,  //Point E 4
+        0.0f,0.0f,_spaceSize,   //Point F 5
+        _spaceSize,0.0f,0.0f,   //Point G 6
+        _spaceSize,0.0f,_spaceSize,    //Point H 7
     };
 
     _voxIndices = {
@@ -340,6 +345,22 @@ void Scene::initializeGL()
   _indicesBufferVox->bind();
   _indicesBufferVox->allocate(_voxIndices.constData(), _voxIndices.size() * sizeof(GLuint));
   _vaoVox.release();
+
+  //
+  // create array container and load voxels into buffer
+  //
+  _vaoSpace.create();
+  _vaoSpace.bind();
+  _vertexBufferSpace.create();
+  _vertexBufferSpace.bind();
+  _vertexBufferSpace.allocate(_spaceVertices.constData(), _spaceVertices.size() * sizeof(GLfloat));
+  QOpenGLFunctions *h = QOpenGLContext::currentContext()->functions();
+  h->glEnableVertexAttribArray(0);
+  h->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+  _indicesBufferVox->bind();
+  _indicesBufferVox->allocate(_voxIndices.constData(), _voxIndices.size() * sizeof(GLuint));
+  _vaoSpace.release();
 }
 
 void Scene::paintGL()
@@ -352,22 +373,12 @@ void Scene::paintGL()
   //
   // set camera
   //
-  const CameraState camera = _currentCamera->state();
   QMatrix4x4 tmp(_viewMatrix);
   tmp.rotate((GLfloat)_xRotation, 1, 0, 0);
   tmp.rotate((GLfloat)_yRotation, 0, 1, 0);
   tmp.rotate((GLfloat)_zRotation, 0, 0, 1);
   tmp.translate(QVector3D(_xTranslate, _yTranslate, _zTranslate));
   _projectionMatrix = _listProjection.at(index);
-
-
-  // set clipping planes
-  glEnable(GL_CLIP_PLANE1);
-  glEnable(GL_CLIP_PLANE2);
-  const double rearClippingPlane[] = {0., 0., -1., camera.rearClippingDistance};
-  glClipPlane(GL_CLIP_PLANE1 , rearClippingPlane);
-  const double frontClippingPlane[] = {0., 0., 1., camera.frontClippingDistance};
-  glClipPlane(GL_CLIP_PLANE2 , frontClippingPlane);
 
   const auto viewMatrix = _projectionMatrix * tmp * _worldMatrix;
 
@@ -379,76 +390,54 @@ void Scene::paintGL()
   _shadersPoints->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
   _shadersPoints->setUniformValue("mvpMatrix", viewMatrix);
   _shadersPoints->setUniformValue("pointSize", _pointSize);
-  _shadersPoints->setUniformValue("colorAxisMode", static_cast<GLfloat>(_colorMode));
-  _shadersPoints->setUniformValue("color", QVector3D(1.,0.,0.));
-  _shadersPoints->setUniformValue("pointsBoundMin", _pointsBoundMin);
-  _shadersPoints->setUniformValue("pointsBoundMax", _pointsBoundMax);
   glDrawArrays(GL_POINTS, 0, _pointsData.size());
   _shadersPoints->release();
   _vaoPoints.release();
 
   //
-  // draw voxels
+  // draw voxels space
   //
-  _vaoVox.bind();
-  _shadersVox->bind();
-  _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
-  for ( int i = 0; i < _nbVox; i++){
-      for (int j = 0; j < _nbVox; j++) {
-          for (int k = 0; k < _nbVox; k++) {
-              if (_voxStorage[i*_nbVox*_nbVox + j*_nbVox + k]) {
-                  _shadersVox->setUniformValue("xt", _xVoxT+i*_voxSize);
-                  _shadersVox->setUniformValue("yt", _yVoxT+j*_voxSize);
-                  _shadersVox->setUniformValue("zt", _zVoxT+k*_voxSize);
-                  glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
+
+  if(_drawSpace){
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+      _vaoSpace.bind();
+      _shadersVox->bind();
+      _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
+      _shadersVox->setUniformValue("xt", _pointsBoundMin[0]);
+      _shadersVox->setUniformValue("yt", _pointsBoundMin[1]);
+      _shadersVox->setUniformValue("zt", _pointsBoundMin[2]);
+      glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      _shadersVox->release();
+      _vaoSpace.release();
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
+
+    //
+    // draw voxels
+    //
+  if(_drawVoxels) {
+      _vaoVox.bind();
+      _shadersVox->bind();
+      _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
+      float voxSize = _spaceSize/_nbVox;
+      for ( int i = 0; i < _nbVox; i++){
+          for (int j = 0; j < _nbVox; j++) {
+              for (int k = 0; k < _nbVox; k++) {
+                  if (_voxStorage[i*_nbVox*_nbVox + j*_nbVox + k]) {
+                      _shadersVox->setUniformValue("xt", _pointsBoundMin[0]+i*voxSize);
+                      _shadersVox->setUniformValue("yt", _pointsBoundMin[1]+j*voxSize);
+                      _shadersVox->setUniformValue("zt", _pointsBoundMin[2]+k*voxSize);
+                      glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
+                  }
               }
           }
       }
+      _shadersVox->release();
+      _vaoVox.release();
   }
-  _shadersVox->release();
-  _vaoVox.release();
-
-  //
-  // draw picked points and line between
-  //
-  glBegin(GL_LINES);
-  glColor3f(1., 1., 0.);
-  {
-    QMatrix4x4 mvMatrix = tmp * _worldMatrix;
-    for (auto vertex : _pickedPoints) {
-      const auto translated = _projectionMatrix * mvMatrix * vertex;
-      glVertex3f(translated.x(), translated.y(), translated.z());
-    }
-  }
-  glEnd();
-  for (auto vertex : _pickedPoints) {
-    _drawMarkerBox(vertex, QColor(1., 1., 0.));
-  }
-
-  //
-  // draw mouse-highlited point
-  //
-  if (_highlitedPoint != QVector3D()) {
-    _drawMarkerBox(_highlitedPoint, QColor(0., 1., 1.));
-  }
-
-}
-
-
-void Scene::_drawMarkerBox(const QVector3D& point, const QColor& color) {
-  glBegin(GL_LINE_LOOP);
-  glColor3f(color.red(), color.green(), color.blue());
-  {
-    const float dx = 0.01;
-    const auto aspect = (float)width() / height();
-    const auto dy = dx*aspect;
-    const auto p = _projectionMatrix * _viewMatrix * _worldMatrix * point;
-    glVertex3f(p.x()-dx, p.y()-dy, p.z());
-    glVertex3f(p.x()+dx, p.y()-dy, p.z());
-    glVertex3f(p.x()+dx, p.y()+dy, p.z());
-    glVertex3f(p.x()-dx, p.y()+dy, p.z());
-  }
-  glEnd();
 }
 
 
@@ -457,49 +446,6 @@ void Scene::resizeGL(int w, int h)
     for(int i = 0 ; i < _listProjection.length() ; ++i)
         _listProjection[i] = createPerspectiveMatrix(_fov_v.at(i), float(h) / float(w), 0.01f, 100.0f);
 }
-
-
-QVector3D Scene::_pickPointFrom2D(const QPoint& pos) const {
-
-  // do slow linear search through small sample
-  // must have is BSP/quadtree for O(logN) searching on large samples
-  float maxDistance = 1e-1;
-  auto ray = _unproject(pos.x(), pos.y());
-  QVector3D closest;
-  for (size_t i = 0; i < _pointsCount; i++) {
-    const GLfloat *p = &_pointsData[i*4];
-    QVector3D point(p[0], p[1], p[2]);
-
-    float distance = (point - ray).length();
-    if (distance < maxDistance) {
-      closest = point;
-      maxDistance = distance;
-    }
-  }
-  return closest;
-}
-
-
-void Scene::mousePressEvent(QMouseEvent *event)
-{
-  _prevMousePosition = event->pos();
-
-  if (event->button() == Qt::LeftButton && _pickpointEnabled)
-  {
-    const QVector3D closest = _pickPointFrom2D(event->pos());
-    if (closest != QVector3D()) {
-      if (_pickedPoints.size() == 2) {
-        // clear previous pair
-        _pickedPoints.clear();
-      }
-
-      _pickedPoints << closest;
-      emit pickpointsChanged(_pickedPoints);
-      update();
-    }
-  }
-}
-
 
 void Scene::mouseMoveEvent(QMouseEvent *event)
 {
@@ -527,87 +473,13 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
       Scene::rotate(dy*0.5, dx*0.5, 0);
     }
   }
-
-  if (_pickpointEnabled) {
-    _highlitedPoint = _pickPointFrom2D(event->pos());
-  }
   update();
 }
-
 
 void Scene::setPointSize(size_t size) {
   assert(size > 0);
   _pointSize = size;
   update();
-}
-
-
-void Scene::setColorAxisMode(colorAxisMode value) {
-  _colorMode = value;
-  update();
-}
-
-
-void Scene::attachCamera(QSharedPointer<Camera> camera) {
-  if (_currentCamera) {
-    disconnect(_currentCamera.data(), &Camera::changed, this, &Scene::_onCameraChanged);
-  }
-  _currentCamera = camera;
-  connect(camera.data(), &Camera::changed, this, &Scene::_onCameraChanged);
-}
-
-
-void Scene::_onCameraChanged(const CameraState&) {
-  update();
-}
-
-
-void Scene::setPickpointEnabled(bool enabled) {
-  _pickpointEnabled = enabled;
-  if (!enabled) {
-    _highlitedPoint = QVector3D();
-    update();
-  }
-}
-
-
-void Scene::clearPickedpoints() {
-  _pickedPoints.clear();
-  emit pickpointsChanged(_pickedPoints);
-  update();
-}
-
-
-QVector3D Scene::_unproject(int x, int y) const {
-  // with Qt5.5 we can make use of new QVector3D::unproject()
-
-  const QMatrix4x4 mvMatrix = _projectionMatrix * _viewMatrix * _worldMatrix;
-  const QMatrix4x4 inverted = mvMatrix.inverted();
-
-  // normalized device coordinates
-  double ndcX = 2*(double)x / width() - 1;
-  double ndcY = 2*(double)(height() - y) / height() - 1;
-  QVector4D nearPoint4 = inverted * QVector4D(ndcX, ndcY, 1, 1);
-  QVector4D farPoint4 = inverted * QVector4D(ndcX, ndcY, -1, 1);
-  if (nearPoint4.w() == 0.0) {
-    return QVector3D();
-  }
-
-  double w = 1.0/nearPoint4.w();
-  QVector3D nearPoint = QVector3D(nearPoint4);
-  nearPoint *= w;
-
-  w = 1.0/farPoint4.w();
-  QVector3D farPoint = QVector3D(farPoint4);
-  farPoint *= w;
-
-  QVector3D direction = farPoint - nearPoint;
-  if (direction.z() == 0.0) {
-    return QVector3D();
-  }
-
-  double t = -nearPoint.z() / direction.z();
-  return nearPoint + direction * t;
 }
 
 void Scene::setXRotation(int angle)
@@ -643,51 +515,19 @@ void Scene::rotate(int dx, int dy, int dz) {
   setZRotation(_zRotation - dz);
 }
 
-void Scene::setxVoxT(int x) {
-    float fx = (float)(x) / 100.;
-    if (fx != _xVoxT) {
-        _xVoxT = fx;
-    }
-    update();
-}
-
-void Scene::setyVoxT(int y) {
-    float fy = (float)(y) / 100.;
-    if (fy != _yVoxT) {
-        _yVoxT = fy;
-    }
-    update();
-}
-
-void Scene::setzVoxT(int z) {
-    float fz = (float)(z) / 100.;
-    if (fz != _zVoxT) {
-        _zVoxT = fz;
-    }
-    update();
-}
-
-void Scene::setVoxSize(int s) {
-    float fs = (float)(s) / 1000.;
-    if (fs != _voxSize) {
-        _voxSize = fs;
-    }
-    _createVox();
-    update();
-}
-
 void Scene::carve() {
-#pragma omp parallel for collapse(3)
+    float voxSize = _spaceSize/_nbVox;
+#pragma omp parallel for shared(voxSize, _voxStorage) collapse(3)
     for (int i = 0; i < _nbVox; ++i) {
         for (int j = 0; j < _nbVox; ++j) {
             for (int k = 0; k < _nbVox; ++k) {
                 _voxStorage[i*_nbVox*_nbVox + j*_nbVox + k] = 0;
-                float x = _xVoxT+i*_voxSize;
-                float y = _yVoxT+j*_voxSize;
-                float z = _zVoxT+k*_voxSize;
+                float x = _pointsBoundMin[0] + i * voxSize;
+                float y = _pointsBoundMin[1] + j * voxSize;
+                float z = _pointsBoundMin[2] + k * voxSize;
                 const float *p = _pointsData.constData();
                 for (size_t l = 0; l < _pointsCount * 7; l += 7) {
-                    if (p[l] > x && p[l] < x + _voxSize && p[l+1] > y && p[l+1] < y + _voxSize && p[l+2] > z && p[l+2] < z + _voxSize) {
+                    if (p[l] > x && p[l] < x + voxSize && p[l+1] > y && p[l+1] < y + voxSize && p[l+2] > z && p[l+2] < z + voxSize) {
                         _voxStorage[i*_nbVox*_nbVox + j*_nbVox + k] = 1;
                         break;
                     }
@@ -695,5 +535,7 @@ void Scene::carve() {
             }
         }
     }
+    _drawSpace = !_drawSpace;
+    _drawVoxels = !_drawVoxels;
     update();
 }

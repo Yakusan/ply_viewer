@@ -21,8 +21,6 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
   Q_OBJECT
 
 public:
-  enum colorAxisMode {COLOR_BY_ROW, COLOR_BY_Z};
-
   Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, int nbVox, QWidget* parent = 0);
   ~Scene();
   QVector<QMatrix4x4> _listView;
@@ -34,18 +32,12 @@ public:
   int _xRotation = 0;
   int _yRotation = 0;
   int _zRotation = 0;
+  bool _drawSpace = true;
+  bool _drawVoxels = false;
 
 public slots:
   void setPointSize(size_t size);
-  void setColorAxisMode(colorAxisMode value);
-  void attachCamera(QSharedPointer<Camera> camera);
-  void setPickpointEnabled(bool enabled);
-  void clearPickedpoints();
   void carve();
-  void setxVoxT(int x);
-  void setyVoxT(int y);
-  void setzVoxT(int z);
-  void setVoxSize(int s);
 
 signals:
   void pickpointsChanged(const QVector<QVector3D> points);
@@ -56,21 +48,16 @@ protected:
   void paintGL() Q_DECL_OVERRIDE;
   void resizeGL(int width, int height) Q_DECL_OVERRIDE;
 
-  void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
   void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
 
 private slots:
-  void _onCameraChanged(const CameraState& state);
 
 private:
   void _loadPLY(const QString& plyFilePath);
   void _loadBundle(const QString& bundleFilePath);
   void _createVox();
   void _cleanup();
-  QVector3D _unproject(int x, int y) const;
-  QVector3D _pickPointFrom2D(const QPoint& pos) const;
-  void _drawMarkerBox(const QVector3D& point, const QColor& color);
   QMatrix4x4 createPerspectiveMatrix(float fov_v, float aspect, float near, float far);
 
   void rotate(int dx, int dy, int dz);
@@ -79,8 +66,6 @@ private:
   void setZRotation(int angle);
 
   float _pointSize;
-  colorAxisMode _colorMode;
-  std::vector<std::pair<QVector3D, QColor> > _axesLines;
 
   QPoint _prevMousePosition;
   QOpenGLVertexArrayObject _vaoPoints;
@@ -92,8 +77,11 @@ private:
   QOpenGLBuffer *_indicesBufferVox;
   QScopedPointer<QOpenGLShaderProgram> _shadersVox;
 
+  QOpenGLVertexArrayObject _vaoSpace;
+  QOpenGLBuffer _vertexBufferSpace;
+
   int                 _nbVox;
-  float               _voxSize;
+  float               _spaceSize;
   int                 _hImg;
   unsigned char       *_voxStorage;
   QVector<double>     _fov_v;
@@ -108,15 +96,9 @@ private:
   QVector3D      _ray;
 
   QVector<float>          _voxVertices;
+  QVector<float>          _spaceVertices;
   QVector<unsigned int>   _voxIndices;
 
   QSharedPointer<Camera> _currentCamera;
 
-  bool _pickpointEnabled;
-  QVector<QVector3D> _pickedPoints;
-  QVector3D _highlitedPoint;
-
-  float _xVoxT = 0.;
-  float _yVoxT = 0.;
-  float _zVoxT = 0.;
 };

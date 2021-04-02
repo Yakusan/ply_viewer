@@ -21,18 +21,15 @@ public:
 
 
 protected:
-  void wheelEvent(QWheelEvent *);
   void keyPressEvent(QKeyEvent *);
 
 
 private slots:
   void _updatePointSize(int);
-  void _updateMeasureInfo(const QVector<QVector3D>& points);
 
 
 private:
   Scene* _scene;
-  QSharedPointer<Camera> _camera;
   QLabel* _lblColorBy;
   QLabel* _lblDistanceInfo;
   QLabel* _lblCamera;
