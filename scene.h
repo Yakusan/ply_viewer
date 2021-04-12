@@ -21,7 +21,7 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
   Q_OBJECT
 
 public:
-  Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, int nbVox, QWidget* parent = 0);
+  Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, int nbVox, QWidget* parent = 0);
   ~Scene();
   QVector<QMatrix4x4> _listView;
   QMatrix4x4          _viewMatrix;
@@ -101,4 +101,5 @@ private:
 
   QSharedPointer<Camera> _currentCamera;
 
+  QString _maskPath;
 };

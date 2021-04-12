@@ -15,7 +15,7 @@
 
 const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
 
-Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, int nbVox, QWidget* parent)
+Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, int nbVox, QWidget* parent)
   : QOpenGLWidget(parent),
     _pointSize(1)
 {
@@ -25,6 +25,7 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, in
   else
       _nbVox = nbVox;
 
+  _maskPath = maskPath;
   _loadPLY(plyFilePath);
   _loadBundle(bundlePath);
   _voxStorage = new unsigned char[_nbVox*_nbVox*_nbVox];

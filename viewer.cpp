@@ -34,13 +34,14 @@ Viewer::Viewer(const QString& configPath)
   QStringList list = buff.split('\n');
   QString plyPath = list[0];
   QString bundlePath = list[1];
-  int hImg = list[2].toInt();
-  int nbVox = list[3].toInt();
+  QString maskPath = list[2];
+  int hImg = list[3].toInt();
+  int nbVox = list[4].toInt();
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(plyPath, bundlePath, hImg, nbVox);
+  _scene = new Scene(plyPath, bundlePath, maskPath, hImg, nbVox);
 
   //
   // make 'point size' contoller
