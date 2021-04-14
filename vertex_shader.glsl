@@ -10,7 +10,7 @@ varying vec3 vcolor;
 
 void main() {
   gl_Position = mvpMatrix * vertex;
-  gl_PointSize  = pointSize;
+  gl_PointSize = pointSize;
 
   vcolor = color;
 }

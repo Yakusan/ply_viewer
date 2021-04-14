@@ -1,5 +1,3 @@
-#pragma once
-
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
@@ -7,9 +5,8 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
 #include <QMatrix4x4>
-#include <QMatrix3x3>
+#include <QVector>
 #include <QVector3D>
-#include <QSharedPointer>
 
 #include <camera.h>
 #include <vector>
@@ -20,7 +17,7 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
   Q_OBJECT
 
 public:
-  enum colorAxisMode {COLOR_BY_ROW, COLOR_BY_Z};
+  //enum colorAxisMode {COLOR_BY_ROW, COLOR_BY_Z};
 
   Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, QWidget* parent = 0);
   ~Scene();
@@ -29,6 +26,8 @@ public:
 
 public slots:
   void setPointSize(size_t size);
+
+  /*
   void setColorAxisMode(colorAxisMode value);
   void attachCamera(QSharedPointer<Camera> camera);
   void setPickpointEnabled(bool enabled);
@@ -37,47 +36,58 @@ public slots:
 
 signals:
   void pickpointsChanged(const QVector<QVector3D> points);
-
+  */
 
 protected:
   void initializeGL() Q_DECL_OVERRIDE;
   void paintGL() Q_DECL_OVERRIDE;
   void resizeGL(int width, int height) Q_DECL_OVERRIDE;
 
+  virtual void initTextures();
+
+/*
   void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
   void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
-
 private slots:
   void _onCameraChanged(const CameraState& state);
+*/
 
 private:
   void _loadPLY(const QString& plyFilePath);
   void _loadBundle(const QString& bundleFilePath);
   void _cleanup();
+
+  /*
   void _drawFrameAxis();
   QVector3D _unproject(int x, int y) const;
   QVector3D _pickPointFrom2D(const QPoint& pos) const;
   void _drawMarkerBox(const QVector3D& point, const QColor& color);
+  */
+
   QMatrix4x4 createPerspectiveMatrix(float fov_v, float aspect, float near, float far);
 
   float _pointSize;
+
+  /*
   colorAxisMode _colorMode;
   std::vector<std::pair<QVector3D, QColor> > _axesLines;
 
   QPoint _prevMousePosition;
+  */
+
+  QOpenGLShaderProgram * _shaders;
   QOpenGLVertexArrayObject _vao;
   QOpenGLBuffer _vertexBuffer;
-  QScopedPointer<QOpenGLShaderProgram> _shaders;
 
   // ajouter photos
-  QOpenGLTexture * _photo;
-  float _planVex[16];
-  unsigned int _planIndex[4];
+  QOpenGLShaderProgram * _shadersPhotos;
   QOpenGLVertexArrayObject _vaoPhotos;
   QOpenGLBuffer _vertexBufferPhotos;
+  QOpenGLTexture * _photo;
+  float _planVex[16];
+  unsigned int _planIndex[6];
   QOpenGLBuffer  * _indexBufferPhotos;
-  QScopedPointer<QOpenGLShaderProgram> _shadersPhotos;
 
   int                 _hImg;
   QVector<double>     _fov_v;
@@ -88,6 +98,8 @@ private:
 
   QVector<float> _pointsData;
   size_t _pointsCount;
+
+  /*
   QVector3D _pointsBoundMin;
   QVector3D _pointsBoundMax;
   QVector3D _ray;
@@ -97,4 +109,5 @@ private:
   bool _pickpointEnabled;
   QVector<QVector3D> _pickedPoints;
   QVector3D _highlitedPoint;
+  */
 };

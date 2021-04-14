@@ -34,7 +34,7 @@ QSlider* createAnglecontrolSlider()
 }
 
 
-Viewer::Viewer(const QString& configPath)
+Viewer::Viewer(const QString& configPath/*, const QSurfaceFormat & glFormat*/)
 {
   // accept keyboard input
   setFocusPolicy(Qt::StrongFocus);
@@ -52,17 +52,18 @@ Viewer::Viewer(const QString& configPath)
   // make and connect scene widget
   //
   _scene = new Scene(plyPath, bundlePath, hImg);
-  connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
+  // connect(_scene, &Scene::pickpointsChanged, this, &Viewer::_updateMeasureInfo);
 
   //
   // make shared camera
   //
-  _camera = QSharedPointer<Camera>(new Camera());
-  _scene->attachCamera(_camera);
+  //_camera = QSharedPointer<Camera>(new Camera());
+  // _scene->attachCamera(_camera);
 
   //
   // make camera controls
   //
+  /*
   auto xSlider = createAnglecontrolSlider();
   auto ySlider = createAnglecontrolSlider();
   auto zSlider = createAnglecontrolSlider();
@@ -72,6 +73,7 @@ Viewer::Viewer(const QString& configPath)
   connect(_camera.data(), SIGNAL(yRotationChanged(int)), ySlider, SLOT(setValue(int)));
   connect(zSlider, SIGNAL(valueChanged(int)), _camera.data(), SLOT(setZRotation(int)));
   connect(_camera.data(), SIGNAL(zRotationChanged(int)), zSlider, SLOT(setValue(int)));
+  */
 
   //
   // make 'point size' contoller
@@ -86,12 +88,14 @@ Viewer::Viewer(const QString& configPath)
   //
   // make 'color by' control label and combobox
   //
+  /*
   _lblColorBy = new QLabel();
   auto cbColorMode = new QComboBox();
   cbColorMode->addItems(QStringList()<<"color by Z axis"<<"color by row");
   connect(cbColorMode, static_cast<void(QComboBox::*)( int ) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
     _scene->setColorAxisMode(newValue == 0 ? Scene::COLOR_BY_Z : Scene::COLOR_BY_ROW);
   });
+  */
 
 
   _lblCamera = new QLabel();
@@ -107,6 +111,7 @@ Viewer::Viewer(const QString& configPath)
   //
   // make 'clipping planes' controllers
   //
+  /*
   const float CP_SLIDER_RANGE = 2000;
   auto fcpLabel = new QLabel();
   auto frontClippingPlaneSlider = new QSlider(Qt::Horizontal);
@@ -153,6 +158,7 @@ Viewer::Viewer(const QString& configPath)
   mtLayout->addWidget(cbActiveMT);
   mtLayout->addWidget(btnClearMT);
   mtLayout->addWidget(_lblDistanceInfo);
+  */
 
   //
   // compose control panel
@@ -161,26 +167,26 @@ Viewer::Viewer(const QString& configPath)
   QVBoxLayout* controlPanel = new QVBoxLayout();
   cpWidget->setMaximumWidth(300);
   cpWidget->setLayout(controlPanel);
-  controlPanel->addWidget(_lblColorBy);
+  // controlPanel->addWidget(_lblColorBy);
   controlPanel->addWidget(_lblCamera);
   controlPanel->addWidget(pointSizeSlider);
   controlPanel->addSpacing(20);
-  controlPanel->addWidget(cbColorMode);
-  controlPanel->addSpacing(20);
+  // controlPanel->addWidget(cbColorMode);
+  // controlPanel->addSpacing(20);
   controlPanel->addWidget(cbCamera);
   controlPanel->addSpacing(40);
-  controlPanel->addWidget(new QLabel(tr("Camera angles")));
-  controlPanel->addWidget(xSlider);
-  controlPanel->addWidget(ySlider);
-  controlPanel->addWidget(zSlider);
-  controlPanel->addSpacing(20);
-  controlPanel->addWidget(fcpLabel);
-  controlPanel->addWidget(frontClippingPlaneSlider);
-  controlPanel->addSpacing(20);
-  controlPanel->addWidget(farcpLabel);
-  controlPanel->addWidget(farClippingPlaneSlider);
-  controlPanel->addSpacing(20);
-  controlPanel->addWidget(gbMeasuringTool);
+  // controlPanel->addWidget(new QLabel(tr("Camera angles")));
+  // controlPanel->addWidget(xSlider);
+  // controlPanel->addWidget(ySlider);
+  // controlPanel->addWidget(zSlider);
+  // controlPanel->addSpacing(20);
+  // controlPanel->addWidget(fcpLabel);
+  // controlPanel->addWidget(frontClippingPlaneSlider);
+  // controlPanel->addSpacing(20);
+  // controlPanel->addWidget(farcpLabel);
+  // controlPanel->addWidget(farClippingPlaneSlider);
+  // controlPanel->addSpacing(20);
+  //controlPanel->addWidget(gbMeasuringTool);
   controlPanel->addStretch(2);
 
   //
@@ -194,17 +200,20 @@ Viewer::Viewer(const QString& configPath)
   //
   // initial state of scene and controls
   //
-  xSlider->setValue(0);
-  ySlider->setValue(0);
-  zSlider->setValue(0);
+  // xSlider->setValue(0);
+  // ySlider->setValue(0);
+  // zSlider->setValue(0);
 
   _updatePointSize(1);
-  cbColorMode->setCurrentIndex(0);
+  //cbColorMode->setCurrentIndex(0);
 
-  _camera->setPosition(QVector3D(0, 0.0, 0.0));
-  _camera->rotate(0, 0, 0);
-  _scene->setColorAxisMode(Scene::COLOR_BY_Z);
-  _scene->setPickpointEnabled(false);
+  // _camera->setPosition(QVector3D(0, 0.0, 0.0));
+  // _camera->rotate(0, 0, 0);
+
+
+  // _scene->setFormat(glFormat);
+  // _scene->setColorAxisMode(Scene::COLOR_BY_Z);
+  // _scene->setPickpointEnabled(false);
 }
 
 Viewer::~Viewer()
@@ -216,7 +225,7 @@ Viewer::~Viewer()
     }
 }
 
-
+/*
 void Viewer::wheelEvent(QWheelEvent* e) {
   if (e->angleDelta().y() > 0) {
     _camera->forward();
@@ -267,14 +276,14 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
       QWidget::keyPressEvent(keyEvent);
   }
 }
-
+*/
 
 void Viewer::_updatePointSize(int value) {
   _scene->setPointSize(value);
-  _lblColorBy->setText(QString("Point size: %1").arg(value));
+  // _lblColorBy->setText(QString("Point size: %1").arg(value));
 }
 
-
+/*
 void Viewer::_updateMeasureInfo(const QVector<QVector3D>& points) {
   QString text;
   if (!points.empty()) {
@@ -291,3 +300,5 @@ void Viewer::_updateMeasureInfo(const QVector<QVector3D>& points) {
   }
   _lblDistanceInfo->setText(text);
 }
+*/
+

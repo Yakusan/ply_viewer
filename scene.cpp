@@ -19,7 +19,8 @@ const size_t POINT_STRIDE_PHOTOS =  4; // x, y, u, v
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, QWidget* parent)
   : QOpenGLWidget(parent),
     _pointSize(1),
-    _colorMode(COLOR_BY_Z)
+    //_colorMode(COLOR_BY_Z)
+    _fov_v()
 {
     float planVex[] = {
       // vertex pos ; texCoord
@@ -29,33 +30,34 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, int hImg, QW
        1.0f,  1.0f, 1.0f, 1.0f  // 3
     };
 
-    unsigned int planIndex[] = { 0, 1, 2, 2, 3, 0 };
+    unsigned int planIndex[] = { 0, 1, 2, 2, 3, 0};
 
     std::memcpy(_planVex, planVex, sizeof(planVex));
-    std::memcpy(_planIndex, planIndex, sizeof(planVex));
+    std::memcpy(_planIndex, planIndex, sizeof(planIndex));
 
     _indexBufferPhotos = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 
-  _pickpointEnabled = false;
+    // _pickpointEnabled = false;
 
-  _hImg = hImg;
+    _hImg = hImg;
 
-  _loadPLY(plyFilePath);
-  _loadBundle(bundlePath);
-  index = 0;
-  _viewMatrix = _listView.at(0);
-  _projectionMatrix = _listProjection.at(0);
+    _loadPLY(plyFilePath);
+    _loadBundle(bundlePath);
+    index = 0;
+    _viewMatrix = _listView.at(0);
+    _projectionMatrix = _listProjection.at(0);
 
-  setMouseTracking(true);
+    // setMouseTracking(true);
 
-  // make trivial axes cross
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(1.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 1.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 1.0, 0.0), QColor(0.0, 1.0, 0.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 0.0, 1.0)));
-  _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 1.0), QColor(0.0, 0.0, 1.0)));
-
+    // make trivial axes cross
+    /*
+    _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
+    _axesLines.push_back(std::make_pair(QVector3D(1.0, 0.0, 0.0), QColor(1.0, 0.0, 0.0)));
+    _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 1.0, 0.0)));
+    _axesLines.push_back(std::make_pair(QVector3D(0.0, 1.0, 0.0), QColor(0.0, 1.0, 0.0)));
+    _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 0.0), QColor(0.0, 0.0, 1.0)));
+    _axesLines.push_back(std::make_pair(QVector3D(0.0, 0.0, 1.0), QColor(0.0, 0.0, 1.0)));
+    */
 }
 
 
@@ -111,13 +113,14 @@ void Scene::_loadPLY(const QString& plyFilePath) {
       ss.clear();
 
       // update bounds
+      /*
       _pointsBoundMax[0] = std::max(x, _pointsBoundMax[0]);
       _pointsBoundMax[1] = std::max(y, _pointsBoundMax[1]);
       _pointsBoundMax[2] = std::max(z, _pointsBoundMax[2]);
       _pointsBoundMin[0] = std::min(x, _pointsBoundMin[0]);
       _pointsBoundMin[1] = std::min(y, _pointsBoundMin[1]);
       _pointsBoundMin[2] = std::min(z, _pointsBoundMin[2]);
-
+      */
     }
 
     // check if we've got exact number of points mentioned in header
@@ -153,7 +156,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     float tmp[3];
     float rt[16];
 
-
+    _fov_v.resize(nbCam);
     for (int i = 0; i < nbCam ; i++) {
         ss.clear();
         std::memset(rt, 0, sizeof(rt));
@@ -164,7 +167,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         ss >> tmp[0];
 
         // cf: http://paulbourke.net/miscellaneous/lens/
-        _fov_v.append(2. * std::atan(_hImg * 0.5 / tmp[0]));
+        _fov_v[i] = 2. * std::atan(_hImg * 0.5 / tmp[0]);
 
         ss.clear();
         for (int j = 0; j < 3; j++) {
@@ -224,7 +227,7 @@ Scene::~Scene()
 
 void Scene::_cleanup()
 {
-  if(_shaders.isNull())
+  if(_shaders == nullptr && _shadersPhotos == nullptr)
     return;
 
   makeCurrent();
@@ -232,13 +235,17 @@ void Scene::_cleanup()
   delete _photo;
 
   _vertexBuffer.destroy();
-
-  _vertexBufferPhotos.destroy();
   _indexBufferPhotos->destroy();
 
   delete _indexBufferPhotos;
 
-  _shaders.reset();
+  _vao.destroy();
+
+  delete _shaders;
+  delete _shadersPhotos;
+
+  _shaders       = nullptr;
+  _shadersPhotos = nullptr;
 
   doneCurrent();
 }
@@ -257,14 +264,13 @@ void Scene::initializeGL()
   //
   // create shaders and map attributes
   //
-  _shaders.reset(new QOpenGLShaderProgram());
+  _shaders = new QOpenGLShaderProgram();
   auto vsLoaded = _shaders->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/vertex_shader.glsl");
   auto fsLoaded = _shaders->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/fragment_shader.glsl");
   assert(vsLoaded && fsLoaded);
   // vector attributes
   _shaders->bindAttributeLocation("vertex", 0);
   _shaders->bindAttributeLocation("color", 1);
-  // constants
   _shaders->bind();
   _shaders->link();
   _shaders->release();
@@ -272,23 +278,26 @@ void Scene::initializeGL()
   // create array container and load points into buffer
   _vao.create();
   _vao.bind();
+
   _vertexBuffer.create();
   _vertexBuffer.bind();
+
   _vertexBuffer.allocate(_pointsData.constData(), _pointsData.size() * sizeof(GLfloat));
   QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
   f->glEnableVertexAttribArray(0);
   f->glEnableVertexAttribArray(1);
-  GLintptr vertex_offset = 0 * sizeof(float);
-  GLintptr color_offset = 3 * sizeof(float);
+  GLintptr vertex_offset = 0 * sizeof(GLfloat);
+  GLintptr color_offset = 3 * sizeof(GLfloat);
   f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, POINT_STRIDE * sizeof(GLfloat), (GLvoid*)vertex_offset);
   f->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, POINT_STRIDE * sizeof(GLfloat), (GLvoid*)color_offset);
+
   _vertexBuffer.release();
+  _vao.release();
 
   //
   // create shaders and map attributes photos
   //
-  _photo = new QOpenGLTexture(QImage("100_7100.JPG"));
-  _shadersPhotos.reset(new QOpenGLShaderProgram());
+  _shadersPhotos = new QOpenGLShaderProgram();
   vsLoaded = _shadersPhotos->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/photos_vertex_shader.glsl");
   fsLoaded = _shadersPhotos->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/photos_fragment_shader.glsl");
   assert(vsLoaded && fsLoaded);
@@ -307,21 +316,28 @@ void Scene::initializeGL()
 
   _vertexBufferPhotos.create();
   _vertexBufferPhotos.bind();
-  _vertexBufferPhotos.allocate(_planVex, sizeof(_planIndex));
+
+  _vertexBufferPhotos.allocate(_planVex, sizeof(_planVex));
+
+  initTextures();
+
   f->glEnableVertexAttribArray(0);
   f->glEnableVertexAttribArray(1);
-  vertex_offset = 0 * sizeof(float);
-  color_offset = 2 * sizeof(float);
+
+  vertex_offset = 0 * sizeof(GLfloat);
+  color_offset = 2 * sizeof(GLfloat);
   f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, POINT_STRIDE_PHOTOS * sizeof(GLfloat), (GLvoid*)vertex_offset);
   f->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, POINT_STRIDE_PHOTOS * sizeof(GLfloat), (GLvoid*)color_offset);
 
-   _vertexBufferPhotos.release();
+  _vertexBufferPhotos.release();
 
   // Rajouter EBO
+  _indexBufferPhotos = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   _indexBufferPhotos->create();
   _indexBufferPhotos->bind();
   _indexBufferPhotos->allocate(_planIndex, sizeof(_planIndex));
   _indexBufferPhotos->release();
+
   _vaoPhotos.release();
 }
 
@@ -333,34 +349,48 @@ void Scene::paintGL()
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE); //required for gl_PointSize
   glEnable(GL_TEXTURE_2D);
 
-  _viewMatrix = _listView.at(index);
-  _projectionMatrix = _listProjection.at(index);
+  // _viewMatrix = _listView.at(index);
+  // _projectionMatrix = _listProjection.at(index);
 
   //
   // draw points cloud
   //
   const auto viewMatrix = _projectionMatrix * _viewMatrix * _worldMatrix;
-  _vao.bind();
+
   _shaders->bind();
+  _vao.bind();
+
   _shaders->setUniformValue("mvpMatrix", viewMatrix);
   _shaders->setUniformValue("pointSize", _pointSize);
   _shaders->setUniformValue("color", QVector3D(1.,0.,0.));
   glDrawArrays(GL_POINTS, 0, _pointsData.size());
-  _shaders->release();
-  _vao.release();
 
+  _vao.release();
+  _shaders->release();
+
+/*
   //
   // draw photos
   //
-  _vaoPhotos.bind();
+  glDisable(GL_DEPTH_TEST);
+
   _shadersPhotos->bind();
   _shadersPhotos->setUniformValue("texColor", 0 );
-  glDrawElements(GL_TRIANGLES, 4,  GL_UNSIGNED_INT, (GLvoid*)0);
-  _shadersPhotos->release();
+
+  _vaoPhotos.bind();
+  _indexBufferPhotos->bind();
+
+  glDrawElements(GL_TRIANGLES, 6,  GL_UNSIGNED_INT, (GLvoid *)0);
+
+  _indexBufferPhotos->release();
   _vaoPhotos.release();
+  _shadersPhotos->release();
+
+  glEnable(GL_DEPTH_TEST);
+  */
 }
 
-
+/*
 void Scene::_drawMarkerBox(const QVector3D& point, const QColor& color) {
   glBegin(GL_LINE_LOOP);
   glColor3f(color.red(), color.green(), color.blue());
@@ -389,7 +419,7 @@ void Scene::_drawFrameAxis() {
   }
   glEnd();
 }
-
+*/
 
 void Scene::resizeGL(int w, int h)
 {
@@ -397,7 +427,18 @@ void Scene::resizeGL(int w, int h)
         _listProjection[i] = createPerspectiveMatrix(_fov_v.at(i), float(h) / float(w), 0.01f, 100.0f);
 }
 
+void Scene::initTextures()
+{
+    // do {
+        _photo = new QOpenGLTexture(QImage(":/100_7100.JPG").mirrored());
+        _photo->setMinificationFilter(QOpenGLTexture::Nearest);
+        _photo->setMagnificationFilter(QOpenGLTexture::Linear);
+        _photo->setWrapMode(QOpenGLTexture::Repeat);
+    // } while();
 
+}
+
+/*
 QVector3D Scene::_pickPointFrom2D(const QPoint& pos) const {
 
   // do slow linear search through small sample
@@ -472,7 +513,7 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
     update();
   }
 }
-
+*/
 
 void Scene::setPointSize(size_t size) {
   assert(size > 0);
@@ -480,7 +521,7 @@ void Scene::setPointSize(size_t size) {
   update();
 }
 
-
+/*
 void Scene::setColorAxisMode(colorAxisMode value) {
   _colorMode = value;
   update();
@@ -548,3 +589,5 @@ QVector3D Scene::_unproject(int x, int y) const {
   double t = -nearPoint.z() / direction.z();
   return nearPoint + direction * t;
 }
+*/
+

@@ -2,7 +2,8 @@
 
 #include <QWidget>
 #include <QVector3D>
-#include <QSharedPointer>
+// #include <QSharedPointer>
+// #include <QSurfaceFormat>
 #include <QLabel>
 
 #include "camera.h"
@@ -16,24 +17,24 @@ class Viewer : public QWidget
 
 public:
 
-  Viewer(const QString& configPath);
+  Viewer(const QString& configPath/*, const QSurfaceFormat & glFormat*/);
   ~Viewer();
 
-
+/*
 protected:
   void wheelEvent(QWheelEvent *);
   void keyPressEvent(QKeyEvent *);
-
+*/
 
 private slots:
   void _updatePointSize(int);
-  void _updateMeasureInfo(const QVector<QVector3D>& points);
+  // void _updateMeasureInfo(const QVector<QVector3D>& points);
 
 
 private:
   Scene* _scene;
-  QSharedPointer<Camera> _camera;
-  QLabel* _lblColorBy;
-  QLabel* _lblDistanceInfo;
+  // QSharedPointer<Camera> _camera;
+  // QLabel* _lblColorBy;
+  // QLabel* _lblDistanceInfo;
   QLabel* _lblCamera;
 };

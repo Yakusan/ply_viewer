@@ -69,7 +69,7 @@ MainWindow::MainWindow()
 
 void MainWindow::_openFileDialog()
 {
-  const QString filePath = QFileDialog::getOpenFileName(this, tr("Open config file"), "", tr("CONFIG Files (config.txt)"));
+  const QString filePath = QFileDialog::getOpenFileName(this, tr("Open config file"), "", tr("CONFIG file *.cfg (*.cfg)"));
   if (!filePath.isEmpty()) {
     _openView(filePath);
   }
@@ -80,8 +80,19 @@ void MainWindow::_openView(const QString& configPath) {
   _closeView();
 
   try {
+      /*
+      // Specify an OpenGL 3.3 format using the Core profile.
+      QSurfaceFormat glFormat;
+
+      glFormat.setVersion(3, 3);
+      glFormat.setProfile(QSurfaceFormat::CoreProfile); // Requires >=Qt-4.8.0
+      glFormat.setRenderableType(QSurfaceFormat::OpenGL);
+      glFormat.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+      glFormat.setDepthBufferSize(24);
+      glFormat.setStencilBufferSize(8);
+      */
     // create new new
-    setCentralWidget(new Viewer(configPath));
+    setCentralWidget(new Viewer(configPath/*, glFormat*/));
     // add source path into title
     setWindowTitle(QString("%1 - %2").arg(configPath).arg(TITLE));
   } catch (const std::exception& e) {

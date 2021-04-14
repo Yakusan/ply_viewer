@@ -27,5 +27,4 @@ data.files = /home/den/Qt5.5.1/5.5/gcc_64/lib/*
 INSTALLS += data
 
 DISTFILES += \
-    photos_vertex_shader.glsl \
-    photos_fragment_shader.glsl
+    photos_vertex_shader.glsl
