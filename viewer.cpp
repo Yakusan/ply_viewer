@@ -10,17 +10,10 @@
 #include <QGroupBox>
 #include <QCheckBox>
 #include <QSlider>
-#include <QMatrix3x3>
-#include <QVector3D>
 
-#include "camera.h"
 #include "scene.h"
 #include "viewer.h"
 
-#include <cassert>
-#include <fstream>
-#include <string>
-#include <sstream>
 
 Viewer::Viewer(const QString& configPath)
 {
@@ -69,7 +62,7 @@ Viewer::Viewer(const QString& configPath)
   connect(voxelSizeSlider, &QSlider::valueChanged, this, &Viewer::_updateVoxelSize);
 
   QLabel *lblVoxelSize = new QLabel();
-  lblPointSize->setText("Voxels size");
+  lblVoxelSize->setText("Voxels size");
 
   QWidget* vspWidget = new QWidget();
   QVBoxLayout* voxelSizePanel = new QVBoxLayout();

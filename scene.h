@@ -8,12 +8,8 @@
 #include <QMatrix4x4>
 #include <QMatrix3x3>
 #include <QVector3D>
-#include <QSharedPointer>
-#include <Qt3DExtras/Qt3DExtras>
-#include <Qt3DCore/Qt3DCore>
 
 #include <unistd.h>
-#include <camera.h>
 #include <vector>
 
 
@@ -105,8 +101,6 @@ private:
   QVector<float>          _voxVertices;
   QVector<float>          _spaceVertices;
   QVector<unsigned int>   _voxIndices;
-
-  QSharedPointer<Camera> _currentCamera;
 
   QString _maskPath;
 };

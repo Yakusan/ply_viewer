@@ -1,11 +1,7 @@
 #pragma once
 
 #include <QWidget>
-#include <QVector3D>
-#include <QSharedPointer>
 #include <QLabel>
-
-#include "camera.h"
 
 // declare but not include to hide scene interface
 class Scene;

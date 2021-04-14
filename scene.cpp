@@ -1,17 +1,11 @@
 #include "scene.h"
 
 #include <QMouseEvent>
-#include <QOpenGLShaderProgram>
-#include <QCoreApplication>
-#include <QScopedPointer>
 #include <cmath>
-#include <cassert>
 #include <iostream>
 #include <fstream>
-#include <string>
 #include <cstring>
 #include <sstream>
-#include <limits>
 #include <omp.h>
 
 const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
@@ -401,28 +395,6 @@ void Scene::paintGL()
       _vaoPoints.release();
   }
 
-  //
-  // draw voxels space
-  //
-
-  if(_drawSpace){
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-      _vaoSpace.bind();
-      _shadersVox->bind();
-      _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
-      _shadersVox->setUniformValue("xt", _pointsBoundMin[0]);
-      _shadersVox->setUniformValue("yt", _pointsBoundMin[1]);
-      _shadersVox->setUniformValue("zt", _pointsBoundMin[2]);
-      _shadersVox->setUniformValue("flag", 1);
-      glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
-      _shadersVox->release();
-      _vaoSpace.release();
-
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  }
-
-
     //
     // draw voxels
     //
@@ -471,6 +443,28 @@ void Scene::paintGL()
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
   }
+
+  //
+  // draw voxels space
+  //
+
+  if(_drawSpace){
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+      _vaoSpace.bind();
+      _shadersVox->bind();
+      _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
+      _shadersVox->setUniformValue("xt", _pointsBoundMin[0]);
+      _shadersVox->setUniformValue("yt", _pointsBoundMin[1]);
+      _shadersVox->setUniformValue("zt", _pointsBoundMin[2]);
+      _shadersVox->setUniformValue("flag", 2);
+      glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
+      _shadersVox->release();
+      _vaoSpace.release();
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
 }
 
 void Scene::resizeGL(int w, int h)
@@ -483,27 +477,10 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
 {
   const int dx = event->x() - _prevMousePosition.x();
   const int dy = event->y() - _prevMousePosition.y();
-  const bool panningMode = (event->modifiers() & Qt::ShiftModifier);
   _prevMousePosition = event->pos();
 
   if (event->buttons() & Qt::LeftButton) {
-
-    if (panningMode) {
-      if (dx > 0) {
-        _currentCamera->right();
-      }
-      if (dx < 0) {
-        _currentCamera->left();
-      }
-      if (dy > 0) {
-        _currentCamera->down();
-      }
-      if (dy < 0) {
-        _currentCamera->up();
-      }
-    } else {
       Scene::rotate(dy*0.5, dx*0.5, 0);
-    }
   }
   update();
 }
@@ -571,7 +548,7 @@ void Scene::intersect() {
     const float *p = _pointsData.constData();
     memset(_voxStorage, 0, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
 #pragma omp parallel for shared(voxSize, _voxStorage, _pointsBoundMin, p)
-    for (int i = 0; i < _pointsCount * 7; i += 7) {
+    for (size_t i = 0; i < _pointsCount * 7; i += 7) {
         int x = (p[i]+ - _pointsBoundMin[0]) / voxSize;
         int y = (p[i+1] - _pointsBoundMin[1]) / voxSize;
         int z = (p[i+2] - _pointsBoundMin[2]) / voxSize;
