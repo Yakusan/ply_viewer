@@ -22,7 +22,7 @@ class Scene : public QOpenGLWidget, protected QOpenGLFunctions
   Q_OBJECT
 
 public:
-  Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, int nbVox, QWidget* parent = 0);
+  Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, QWidget* parent = 0);
   ~Scene();
   QVector<QMatrix4x4> _listView;
   QMatrix4x4          _viewMatrix;
@@ -33,11 +33,13 @@ public:
   int _xRotation = 0;
   int _yRotation = 0;
   int _zRotation = 0;
-  bool _drawSpace = true;
+  bool _drawPoints = true;
+  bool _drawSpace = false;
   bool _drawVoxels = false;
 
 public slots:
   void setPointSize(size_t size);
+  void setVoxelSize(int nb);
   void intersect();
   void carve();
 
@@ -85,7 +87,7 @@ private:
   QOpenGLVertexArrayObject _vaoSpace;
   QOpenGLBuffer _vertexBufferSpace;
 
-  int                 _nbVox;
+  int                 _nbVox = 32;
   float               _spaceSize;
   int                 _hImg;
   unsigned char       *_voxStorage;

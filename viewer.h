@@ -26,11 +26,9 @@ protected:
 
 private slots:
   void _updatePointSize(int);
+  void _updateVoxelSize(int);
 
 
 private:
   Scene* _scene;
-  QLabel* _lblColorBy;
-  QLabel* _lblDistanceInfo;
-  QLabel* _lblCamera;
 };

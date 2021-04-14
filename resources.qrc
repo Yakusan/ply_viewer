@@ -4,5 +4,7 @@
         <file>vertex_shader_points.glsl</file>
         <file>fragment_shader_vox.glsl</file>
         <file>vertex_shader_vox.glsl</file>
+        <file>fragment_shader_space.glsl</file>
+        <file>vertex_shader_space.glsl</file>
     </qresource>
 </RCC>

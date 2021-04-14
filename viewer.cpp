@@ -36,12 +36,11 @@ Viewer::Viewer(const QString& configPath)
   QString bundlePath = list[1];
   QString maskPath = list[2];
   int hImg = list[3].toInt();
-  int nbVox = list[4].toInt();
 
   //
   // make and connect scene widget
   //
-  _scene = new Scene(plyPath, bundlePath, maskPath, hImg, nbVox);
+  _scene = new Scene(plyPath, bundlePath, maskPath, hImg);
 
   //
   // make 'point size' contoller
@@ -53,8 +52,32 @@ Viewer::Viewer(const QString& configPath)
   pointSizeSlider->setPageStep(1);
   connect(pointSizeSlider, &QSlider::valueChanged, this, &Viewer::_updatePointSize);
 
+  QLabel *lblPointSize = new QLabel();
+  lblPointSize->setText("Points size");
 
-  _lblCamera = new QLabel();
+  QWidget* pspWidget = new QWidget();
+  QVBoxLayout* pointSizePanel = new QVBoxLayout();
+  pspWidget->setMaximumWidth(300);
+  pspWidget->setLayout(pointSizePanel);
+  pointSizePanel->addWidget(lblPointSize);
+  pointSizePanel->addWidget(pointSizeSlider);
+
+  auto voxelSizeSlider = new QSlider(Qt::Horizontal);
+  voxelSizeSlider->setRange(1, 128);
+  voxelSizeSlider->setSingleStep(1);
+  voxelSizeSlider->setValue(32);
+  connect(voxelSizeSlider, &QSlider::valueChanged, this, &Viewer::_updateVoxelSize);
+
+  QLabel *lblVoxelSize = new QLabel();
+  lblPointSize->setText("Voxels size");
+
+  QWidget* vspWidget = new QWidget();
+  QVBoxLayout* voxelSizePanel = new QVBoxLayout();
+  vspWidget->setMaximumWidth(300);
+  vspWidget->setLayout(voxelSizePanel);
+  voxelSizePanel->addWidget(lblVoxelSize);
+  voxelSizePanel->addWidget(voxelSizeSlider);
+
   auto cbCamera = new QComboBox();
   for (int i = 0; i < _scene->_listView.length(); i++) {
       cbCamera->addItem(QString("Camera " + QString::number(i)));
@@ -86,6 +109,28 @@ Viewer::Viewer(const QString& configPath)
       _scene->carve();
   });
 
+  auto cbDrawPoints = new QCheckBox(tr("Draw point cloud"));
+  cbDrawPoints->setMaximumWidth(200);
+  cbDrawPoints->setCheckState(Qt::CheckState::Checked);
+  connect(cbDrawPoints, &QCheckBox::stateChanged, [=](const int state) {
+      _scene->_drawPoints = state;
+      _scene->update();
+  });
+
+  auto cbDrawSpace = new QCheckBox(tr("Draw Space"));
+  cbDrawSpace->setMaximumWidth(200);
+  connect(cbDrawSpace, &QCheckBox::stateChanged, [=](const int state) {
+      _scene->_drawSpace = state;
+      _scene->update();
+  });
+
+  auto cbDrawVoxels = new QCheckBox(tr("Draw Voxels"));
+  cbDrawVoxels->setMaximumWidth(200);
+  connect(cbDrawVoxels, &QCheckBox::stateChanged, [=](const int state) {
+      _scene->_drawVoxels = state;
+      _scene->update();
+  });
+
 
   //
   // compose control panel
@@ -94,14 +139,20 @@ Viewer::Viewer(const QString& configPath)
   QVBoxLayout* controlPanel = new QVBoxLayout();
   cpWidget->setMaximumWidth(300);
   cpWidget->setLayout(controlPanel);
-  controlPanel->addWidget(_lblCamera);
-  controlPanel->addWidget(pointSizeSlider);
-  controlPanel->addSpacing(20);
+  controlPanel->addWidget(pspWidget);
   controlPanel->addSpacing(20);
   controlPanel->addWidget(cbCamera);
-  controlPanel->addSpacing(40);
+  controlPanel->addSpacing(30);
+  controlPanel->addWidget(cbDrawPoints);
+  controlPanel->addSpacing(10);
+  controlPanel->addWidget(cbDrawSpace);
+  controlPanel->addSpacing(10);
+  controlPanel->addWidget(cbDrawVoxels);
+  controlPanel->addSpacing(30);
+  controlPanel->addWidget(vspWidget);
+  controlPanel->addSpacing(30);
   controlPanel->addWidget(btnIntersect);
-  controlPanel->addSpacing(40);
+  controlPanel->addSpacing(10);
   controlPanel->addWidget(btnCarve);
   controlPanel->addStretch(2);
 
@@ -144,22 +195,22 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
 
     case Qt::Key_Up:
     case Qt::Key_Z:
-      _scene->_yTranslate += 0.01;
+      _scene->_zTranslate += 0.01;
       break;
 
     case Qt::Key_Down:
     case Qt::Key_S:
-      _scene->_yTranslate -= 0.01;
+      _scene->_zTranslate -= 0.01;
       break;
 
     case Qt::Key_Space:
     case Qt::Key_A:
-      _scene->_zTranslate += 0.01;
+      _scene->_yTranslate -= 0.01;
       break;
 
     case Qt::Key_C:
     case Qt::Key_E:
-      _scene->_zTranslate -= 0.01;
+      _scene->_yTranslate += 0.01;
       break;
 
     default:
@@ -171,4 +222,8 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
 
 void Viewer::_updatePointSize(int value) {
   _scene->setPointSize(value);
+}
+
+void Viewer::_updateVoxelSize(int value) {
+  _scene->setVoxelSize(value);
 }

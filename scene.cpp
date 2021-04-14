@@ -17,18 +17,12 @@
 const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
 
 unsigned char *tmp;
-int a = 0;
 
-Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, int nbVox, QWidget* parent)
+Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, QWidget* parent)
   : QOpenGLWidget(parent),
     _pointSize(1)
 {
   _hImg = hImg;
-  if (nbVox < 1)
-      _nbVox = 32;
-  else
-      _nbVox = nbVox;
-
   _maskPath = maskPath;
   _loadPLY(plyFilePath);
   _loadBundle(bundlePath);
@@ -43,7 +37,6 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& mas
 
 
   tmp = new unsigned char[_nbVox*_nbVox*_nbVox];
-  memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
 
   setMouseTracking(true);
 }
@@ -311,7 +304,7 @@ void Scene::initializeGL()
 
   // create array container and load points into buffer
   _vaoPoints.create();
-  QOpenGLVertexArrayObject::Binder vaoPointsBinder(&_vaoPoints);
+  _vaoPoints.bind();
   _vertexBufferPoints.create();
   _vertexBufferPoints.bind();
   _vertexBufferPoints.allocate(_pointsData.constData(), _pointsData.size() * sizeof(GLfloat));
@@ -326,6 +319,7 @@ void Scene::initializeGL()
   f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)pointRowIndex_offset);
   f->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 7*sizeof(GLfloat), (GLvoid*)color_offset);
   _vertexBufferPoints.release();
+  _vaoPoints.release();
 
   //
   // create voxels shaders
@@ -378,6 +372,7 @@ void Scene::paintGL()
   // ensure GL flags
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE); //required for gl_PointSize
 
   //
@@ -395,14 +390,16 @@ void Scene::paintGL()
   //
   // draw points cloud
   //
-  _vaoPoints.bind();
-  _shadersPoints->bind();
-  _shadersPoints->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
-  _shadersPoints->setUniformValue("mvpMatrix", viewMatrix);
-  _shadersPoints->setUniformValue("pointSize", _pointSize);
-  glDrawArrays(GL_POINTS, 0, _pointsData.size());
-  _shadersPoints->release();
-  _vaoPoints.release();
+  if (_drawPoints){
+      _vaoPoints.bind();
+      _shadersPoints->bind();
+      _shadersPoints->setUniformValue("pointsCount", static_cast<GLfloat>(_pointsCount));
+      _shadersPoints->setUniformValue("mvpMatrix", viewMatrix);
+      _shadersPoints->setUniformValue("pointSize", _pointSize);
+      glDrawArrays(GL_POINTS, 0, _pointsData.size());
+      _shadersPoints->release();
+      _vaoPoints.release();
+  }
 
   //
   // draw voxels space
@@ -430,6 +427,8 @@ void Scene::paintGL()
     // draw voxels
     //
   if(_drawVoxels) {
+
+
       _vaoVox.bind();
       _shadersVox->bind();
       _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
@@ -474,7 +473,6 @@ void Scene::paintGL()
   }
 }
 
-
 void Scene::resizeGL(int w, int h)
 {
     for(int i = 0 ; i < _listProjection.length() ; ++i)
@@ -516,6 +514,25 @@ void Scene::setPointSize(size_t size) {
   update();
 }
 
+void Scene::setVoxelSize(int nb) {
+  _nbVox = nb;
+  delete [] _voxStorage;
+  delete [] tmp;
+  _voxStorage = new unsigned char[_nbVox*_nbVox*_nbVox];
+  tmp =  new unsigned char[_nbVox*_nbVox*_nbVox];
+  memset(_voxStorage, 1, _nbVox*_nbVox*_nbVox * sizeof(unsigned char));
+  memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
+  _createVox(); QOpenGLVertexArrayObject::Binder vaoPointsBinder(&_vaoPoints);
+
+  _vertexBufferVox.bind();
+  _vertexBufferVox.allocate(_voxVertices.constData(), _voxVertices.size() * sizeof(GLfloat));
+  QOpenGLFunctions *g = QOpenGLContext::currentContext()->functions();
+  g->glEnableVertexAttribArray(0);
+  g->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+  _vertexBufferVox.release();
+  update();
+}
+
 void Scene::setXRotation(int angle)
 {
   angle = angle % 360;
@@ -551,60 +568,44 @@ void Scene::rotate(int dx, int dy, int dz) {
 
 void Scene::intersect() {
     float voxSize = _spaceSize/_nbVox;
-#pragma omp parallel for shared(voxSize, _voxStorage, _pointsBoundMin) collapse(3)
-    for (int i = 0; i < _nbVox; ++i) {
-        for (int j = 0; j < _nbVox; ++j) {
-            for (int k = 0; k < _nbVox; ++k) {
-                _voxStorage[i*_nbVox*_nbVox + j*_nbVox + k] = 0;
-                float x = _pointsBoundMin[0] + i * voxSize;
-                float y = _pointsBoundMin[1] + j * voxSize;
-                float z = _pointsBoundMin[2] + k * voxSize;
-                const float *p = _pointsData.constData();
-                for (size_t l = 0; l < _pointsCount * 7; l += 7) {
-                    if (p[l] > x && p[l] < x + voxSize && p[l+1] > y && p[l+1] < y + voxSize && p[l+2] > z && p[l+2] < z + voxSize) {
-                        _voxStorage[i*_nbVox*_nbVox + j*_nbVox + k] = 1;
-                        break;
-                    }
-                }
-            }
-        }
+    const float *p = _pointsData.constData();
+    memset(_voxStorage, 0, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
+#pragma omp parallel for shared(voxSize, _voxStorage, _pointsBoundMin, p)
+    for (int i = 0; i < _pointsCount * 7; i += 7) {
+        int x = (p[i]+ - _pointsBoundMin[0]) / voxSize;
+        int y = (p[i+1] - _pointsBoundMin[1]) / voxSize;
+        int z = (p[i+2] - _pointsBoundMin[2]) / voxSize;
+        _voxStorage[x*_nbVox*_nbVox + y*_nbVox + z] = 1;
     }
-    _drawSpace = false;
-    _drawVoxels = true;
     update();
 }
 
 void Scene::carve() {
-    _drawSpace = false;
-    _drawVoxels = true;
-    if (a < _listProjection.length()) {
-        carveView(a);
-        a++;
-    }
-    else {
-        tmp = new unsigned char[_nbVox*_nbVox*_nbVox];
-        memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
-        a = 0;
-        _drawSpace = true;
-        _drawVoxels = false;
+    memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
+    for (int i = 0; i < _listProjection.length() ; i++) {
+        carveView(i);
     }
     update();
 }
 
 void Scene::carveView(int v) {
     float voxSize = _spaceSize/_nbVox;
+    float halSize = voxSize * .5;
+    float t[3];
+    t[0] = _pointsBoundMin[0] + halSize;
+    t[1] = _pointsBoundMin[1] + halSize;
+    t[2] = _pointsBoundMin[2] + halSize;
     QVector4D X, X2;
     QImage mask(_maskPath+"/mask_"+QString::number(v)+".jpg");
     int h = mask.height(), w = mask.width();
     const auto viewMatrix = _listProjection.at(v) * _listView.at(v);
-
-//#pragma omp parallel for shared(voxSize, tmp, _pointsBoundMin, viewMatrix) collapse(3)
+#pragma omp parallel for private(X, X2) shared(voxSize, _voxStorage, _pointsBoundMin, _nbVox, tmp, t) collapse(3)
     for (int i = 0; i < _nbVox ; i++) {
         for (int j = 0; j < _nbVox; j++) {
             for (int k = 0; k < _nbVox; k++){
-                X2.setX(_pointsBoundMin[0] + i * voxSize);
-                X2.setY(_pointsBoundMin[1] + j * voxSize);
-                X2.setZ(_pointsBoundMin[2] + k * voxSize);
+                X2.setX(i * voxSize + t[0]);
+                X2.setY(j * voxSize + t[1]);
+                X2.setZ(k * voxSize + t[2]);
                 X2.setW(1.0);
 
                 X = viewMatrix * X2;
@@ -623,10 +624,7 @@ void Scene::carveView(int v) {
                 float xRaster = std::floor(xNDC * w);
                 float yRaster = std::floor(yNDC * h);
 
-                if (tmp[i*_nbVox*_nbVox + j*_nbVox + k] && mask.pixelColor(xRaster,yRaster).red() == 255){
-                    tmp[i*_nbVox*_nbVox + j*_nbVox + k] = 1;
-                }
-                else {
+                if (mask.pixelColor(xRaster,yRaster).red() != 255){
                     tmp[i*_nbVox*_nbVox + j*_nbVox + k] = 0;
                 }
             }
