@@ -12,8 +12,12 @@
 #include <cstring>
 #include <sstream>
 #include <limits>
+#include <omp.h>
 
 const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
+
+unsigned char *tmp;
+int a = 0;
 
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, int nbVox, QWidget* parent)
   : QOpenGLWidget(parent),
@@ -36,6 +40,10 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& mas
   _indicesBufferVox = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   _spaceSize = qMax(qMax(_pointsBoundMax[0] - _pointsBoundMin[0],_pointsBoundMax[1] - _pointsBoundMin[1]), _pointsBoundMax[2] - _pointsBoundMin[2]);
   _createVox();
+
+
+  tmp = new unsigned char[_nbVox*_nbVox*_nbVox];
+  memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
 
   setMouseTracking(true);
 }
@@ -268,6 +276,7 @@ void Scene::_cleanup()
   _shadersPoints.reset();
   delete _indicesBufferVox;
   delete [] _voxStorage;
+  delete [] tmp;
   doneCurrent();
 }
 
@@ -408,6 +417,7 @@ void Scene::paintGL()
       _shadersVox->setUniformValue("xt", _pointsBoundMin[0]);
       _shadersVox->setUniformValue("yt", _pointsBoundMin[1]);
       _shadersVox->setUniformValue("zt", _pointsBoundMin[2]);
+      _shadersVox->setUniformValue("flag", 1);
       glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
       _shadersVox->release();
       _vaoSpace.release();
@@ -431,6 +441,7 @@ void Scene::paintGL()
                       _shadersVox->setUniformValue("xt", _pointsBoundMin[0]+i*voxSize);
                       _shadersVox->setUniformValue("yt", _pointsBoundMin[1]+j*voxSize);
                       _shadersVox->setUniformValue("zt", _pointsBoundMin[2]+k*voxSize);
+                      _shadersVox->setUniformValue("flag", 1);
                       glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
                   }
               }
@@ -438,6 +449,28 @@ void Scene::paintGL()
       }
       _shadersVox->release();
       _vaoVox.release();
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      _vaoVox.bind();
+      _shadersVox->bind();
+      _shadersVox->setUniformValue("mvpMatrix", viewMatrix);
+      for ( int i = 0; i < _nbVox; i++){
+          for (int j = 0; j < _nbVox; j++) {
+              for (int k = 0; k < _nbVox; k++) {
+                  if (_voxStorage[i*_nbVox*_nbVox + j*_nbVox + k]) {
+                      _shadersVox->setUniformValue("xt", _pointsBoundMin[0]+i*voxSize);
+                      _shadersVox->setUniformValue("yt", _pointsBoundMin[1]+j*voxSize);
+                      _shadersVox->setUniformValue("zt", _pointsBoundMin[2]+k*voxSize);
+                      _shadersVox->setUniformValue("flag", 0);
+                      glDrawElements(GL_TRIANGLES, 12*3, GL_UNSIGNED_INT, (GLvoid*)0);
+                  }
+              }
+          }
+      }
+      _shadersVox->release();
+      _vaoVox.release();
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
   }
 }
 
@@ -516,9 +549,9 @@ void Scene::rotate(int dx, int dy, int dz) {
   setZRotation(_zRotation - dz);
 }
 
-void Scene::carve() {
+void Scene::intersect() {
     float voxSize = _spaceSize/_nbVox;
-#pragma omp parallel for shared(voxSize, _voxStorage) collapse(3)
+#pragma omp parallel for shared(voxSize, _voxStorage, _pointsBoundMin) collapse(3)
     for (int i = 0; i < _nbVox; ++i) {
         for (int j = 0; j < _nbVox; ++j) {
             for (int k = 0; k < _nbVox; ++k) {
@@ -536,7 +569,68 @@ void Scene::carve() {
             }
         }
     }
-    _drawSpace = !_drawSpace;
-    _drawVoxels = !_drawVoxels;
+    _drawSpace = false;
+    _drawVoxels = true;
     update();
+}
+
+void Scene::carve() {
+    _drawSpace = false;
+    _drawVoxels = true;
+    if (a < _listProjection.length()) {
+        carveView(a);
+        a++;
+    }
+    else {
+        tmp = new unsigned char[_nbVox*_nbVox*_nbVox];
+        memset(tmp, 1, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
+        a = 0;
+        _drawSpace = true;
+        _drawVoxels = false;
+    }
+    update();
+}
+
+void Scene::carveView(int v) {
+    float voxSize = _spaceSize/_nbVox;
+    QVector4D X, X2;
+    QImage mask(_maskPath+"/mask_"+QString::number(v)+".jpg");
+    int h = mask.height(), w = mask.width();
+    const auto viewMatrix = _listProjection.at(v) * _listView.at(v);
+
+//#pragma omp parallel for shared(voxSize, tmp, _pointsBoundMin, viewMatrix) collapse(3)
+    for (int i = 0; i < _nbVox ; i++) {
+        for (int j = 0; j < _nbVox; j++) {
+            for (int k = 0; k < _nbVox; k++){
+                X2.setX(_pointsBoundMin[0] + i * voxSize);
+                X2.setY(_pointsBoundMin[1] + j * voxSize);
+                X2.setZ(_pointsBoundMin[2] + k * voxSize);
+                X2.setW(1.0);
+
+                X = viewMatrix * X2;
+
+                float x = X.x() / X.z();
+                float y = X.y() / -X.z();
+
+                if (abs(x) >= 1. || abs(y) >= 1.) {
+                    tmp[i*_nbVox*_nbVox + j*_nbVox + k] = 0;
+                    continue;
+                }
+
+                float xNDC = (x + 2. / 2.) / 2.;
+                float yNDC = (y + 2. / 2.) / 2.;
+
+                float xRaster = std::floor(xNDC * w);
+                float yRaster = std::floor(yNDC * h);
+
+                if (tmp[i*_nbVox*_nbVox + j*_nbVox + k] && mask.pixelColor(xRaster,yRaster).red() == 255){
+                    tmp[i*_nbVox*_nbVox + j*_nbVox + k] = 1;
+                }
+                else {
+                    tmp[i*_nbVox*_nbVox + j*_nbVox + k] = 0;
+                }
+            }
+        }
+    }
+    memcpy(_voxStorage, tmp, _nbVox*_nbVox*_nbVox*sizeof(unsigned char));
 }

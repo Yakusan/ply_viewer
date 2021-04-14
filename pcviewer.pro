@@ -14,6 +14,8 @@ CONFIG += c++11
 
 QMAKE_CXXFLAGS += -fopenmp
 
+QMAKE_LFLAGS += -fopenmp
+
 LIBS += -fopenmp
 
 RESOURCES += \

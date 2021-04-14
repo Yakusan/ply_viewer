@@ -74,7 +74,13 @@ Viewer::Viewer(const QString& configPath)
   //
   //make carve button
   //
-  auto btnCarve = new QPushButton(tr("Intersect"));
+  auto btnIntersect = new QPushButton(tr("Intersect"));
+  btnIntersect->setMaximumWidth(100);
+  connect(btnIntersect, &QPushButton::pressed, [=]() {
+      _scene->intersect();
+  });
+
+  auto btnCarve = new QPushButton(tr("Carve"));
   btnCarve->setMaximumWidth(100);
   connect(btnCarve, &QPushButton::pressed, [=]() {
       _scene->carve();
@@ -93,6 +99,8 @@ Viewer::Viewer(const QString& configPath)
   controlPanel->addSpacing(20);
   controlPanel->addSpacing(20);
   controlPanel->addWidget(cbCamera);
+  controlPanel->addSpacing(40);
+  controlPanel->addWidget(btnIntersect);
   controlPanel->addSpacing(40);
   controlPanel->addWidget(btnCarve);
   controlPanel->addStretch(2);

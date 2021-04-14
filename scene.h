@@ -12,6 +12,7 @@
 #include <Qt3DExtras/Qt3DExtras>
 #include <Qt3DCore/Qt3DCore>
 
+#include <unistd.h>
 #include <camera.h>
 #include <vector>
 
@@ -37,6 +38,7 @@ public:
 
 public slots:
   void setPointSize(size_t size);
+  void intersect();
   void carve();
 
 signals:
@@ -64,6 +66,9 @@ private:
   void setXRotation(int angle);
   void setYRotation(int angle);
   void setZRotation(int angle);
+  void carveView(int v);
+
+  QVector2D project(QVector4D v);
 
   float _pointSize;
 
