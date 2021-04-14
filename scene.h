@@ -9,13 +9,11 @@
 #include <QMatrix3x3>
 #include <QVector3D>
 #include <QSharedPointer>
-#include <Qt3DExtras/Qt3DExtras>
-#include <Qt3DCore/Qt3DCore>
 
 #include <unistd.h>
-#include <camera.h>
 #include <vector>
 
+#include "camera.h"
 
 class Scene : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -25,14 +23,8 @@ public:
   Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, QWidget* parent = 0);
   ~Scene();
   QVector<QMatrix4x4> _listView;
-  QMatrix4x4          _viewMatrix;
+  Camera              _currentCamera; // Peut bouger
   int index;
-  float _xTranslate = 0.;
-  float _yTranslate = 0.;
-  float _zTranslate = 0.;
-  int _xRotation = 0;
-  int _yRotation = 0;
-  int _zRotation = 0;
   bool _drawPoints = true;
   bool _drawSpace = false;
   bool _drawVoxels = false;
@@ -105,8 +97,6 @@ private:
   QVector<float>          _voxVertices;
   QVector<float>          _spaceVertices;
   QVector<unsigned int>   _voxIndices;
-
-  QSharedPointer<Camera> _currentCamera;
 
   QString _maskPath;
 };

@@ -1,122 +1,43 @@
 #include "camera.h"
 
-const float CAMERA_STEP = 0.01;
-
-Camera::Camera() {
-  _xRotation = 0;
-  _yRotation = 0;
-  _zRotation = 0;
-  _frontClippingPlaneDistance = 0;
-  _rearClippingDistance = 0;
-}
-
-
-void Camera::forward()
+void Camera::translate(float tx, float ty, float tz)
 {
-  _position[2] += CAMERA_STEP;
-  _notify();
+    setXTranslation(tx);
+    setYTranslation(ty);
+    setZTranslation(tz);
+}
+
+void Camera::rotate(float dx, float dy) {
+  setXRotation(dx);
+  setYRotation(dy);
 }
 
 
-void Camera::backward()
+void Camera::updateView()
 {
-  _position[2] -= CAMERA_STEP;
-  _notify();
-}
+    float * tx = _currentView.data() + 12;
+    float * ty = _currentView.data() + 13;
+    float * tz = _currentView.data() + 14;
 
+    float tmpX = *tx;
+    float tmpY = *ty;
+    float tmpZ = *tz;
 
-void Camera::left()
-{
-  _position[0] += CAMERA_STEP;
-  _notify();
-}
+    *tx = 0.f;
+    *ty = 0.f;
+    *tz = 0.f;
 
+    _currentView.rotate(-_yRotation, QVector3D(0, 1, 0));
+    _currentView.rotate(_xRotation, QVector3D(1, 0, 0));
 
-void Camera::right()
-{
-  _position[0] -= CAMERA_STEP;
-  _notify();
+    *tx = tmpX + _xTranslation;
+    *ty = tmpY + _yTranslation;
+    *tz = tmpZ + _zTranslation;
 
-}
+    _xRotation = 0.f;
+    _yRotation = 0.f;
 
-
-void Camera::up()
-{
-  _position[1] -= CAMERA_STEP;
-  _notify();
-}
-
-
-void Camera::down()
-{
-  _position[1] += CAMERA_STEP;
-  _notify();
-
-}
-
-
-void Camera::setFrontCPDistance(double distance) {
-  _frontClippingPlaneDistance = distance;
-  _notify();
-}
-
-
-void Camera::setRearCPDistance(double distance) {
-  _rearClippingDistance = distance;
-  _notify();
-}
-
-
-void Camera::setPosition(const QVector3D& position) {
-  _position = position;
-}
-
-
-void Camera::setXRotation(int angle)
-{
-  angle = angle % (360 * RK);
-  if (angle != _xRotation) {
-    _xRotation = angle;
-    emit xRotationChanged(angle);
-    _notify();
-  }
-}
-
-
-void Camera::setYRotation(int angle)
-{
-  angle = angle % (360 * RK);
-  if (angle != _yRotation) {
-    _yRotation = angle;
-    emit yRotationChanged(angle);
-    _notify();
-  }
-}
-
-
-void Camera::setZRotation(int angle)
-{
-  angle = angle % (360 * RK);
-  if (angle != _zRotation) {
-    _zRotation = angle;
-    emit zRotationChanged(angle);
-    _notify();
-  }
-}
-
-
-void Camera::rotate(int dx, int dy, int dz) {
-  setXRotation(_xRotation + dx);
-  setYRotation(_yRotation + dy);
-  setZRotation(_zRotation + dz);
-}
-
-
-CameraState Camera::state() const {
-  return CameraState(
-    _position,
-    QVector3D((float)_xRotation/RK, (float)_yRotation/RK, (float)_zRotation/RK),
-    _frontClippingPlaneDistance,
-    _rearClippingDistance
-    );
+    _xTranslation = 0.f;
+    _yTranslation = 0.f;
+    _zTranslation = 0.f;
 }

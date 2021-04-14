@@ -84,13 +84,7 @@ Viewer::Viewer(const QString& configPath)
   }
   connect(cbCamera, static_cast<void(QComboBox::*)(int) >(&QComboBox::currentIndexChanged), [=](const int newValue) {
      _scene->index = newValue;
-     _scene->_viewMatrix = _scene->_listView.at(_scene->index);
-     _scene->_xRotation = 0.;
-     _scene->_yRotation = 0.;
-     _scene->_zRotation = 0.;
-     _scene->_xTranslate = 0.;
-     _scene->_yTranslate = 0.;
-     _scene->_zTranslate = 0.;
+     _scene->_currentCamera.setViewMatrix(_scene->_listView.at(_scene->index));
      _scene->update();
   });
 
@@ -185,37 +179,38 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
 
     case Qt::Key_Left:
     case Qt::Key_Q:
-      _scene->_xTranslate += 0.01;
+      _scene->_currentCamera.setXTranslation(0.01);
       break;
 
     case Qt::Key_Right:
     case Qt::Key_D:
-      _scene->_xTranslate -= 0.01;
+      _scene->_currentCamera.setXTranslation(-0.01);
       break;
 
     case Qt::Key_Up:
     case Qt::Key_Z:
-      _scene->_zTranslate += 0.01;
+      _scene->_currentCamera.setZTranslation(0.01);
       break;
 
     case Qt::Key_Down:
-    case Qt::Key_S:
-      _scene->_zTranslate -= 0.01;
+    case Qt::Key_S:;
+      _scene->_currentCamera.setZTranslation(-0.01);
       break;
 
     case Qt::Key_Space:
     case Qt::Key_A:
-      _scene->_yTranslate -= 0.01;
+      _scene->_currentCamera.setYTranslation(-0.01);
       break;
 
     case Qt::Key_C:
     case Qt::Key_E:
-      _scene->_yTranslate += 0.01;
+      _scene->_currentCamera.setYTranslation(0.01);
       break;
 
     default:
       QWidget::keyPressEvent(keyEvent);
   }
+  _scene->_currentCamera.updateView();
   _scene->update();
 }
 

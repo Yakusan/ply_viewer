@@ -1,74 +1,44 @@
-#pragma once
+#ifndef __CAMERA_H__
+#define __CAMERA_H__
 
-#include <QObject>
-#include <QVector3D>
 #include <QMatrix4x4>
-
-struct CameraState {
-  CameraState(const QVector3D& position_, const QVector3D& rotation_,
-              double frontClippingDistance_, double farClippingDistance_)
-    : position(position_),
-      rotation(rotation_),
-      frontClippingDistance(frontClippingDistance_),
-      rearClippingDistance(farClippingDistance_)
-  {}
-
-  const QVector3D position;
-  const QVector3D rotation;
-  const QMatrix4x4 projection;
-  const double frontClippingDistance;
-  const double rearClippingDistance;
-};
-
 
 class Camera : public QObject
 {
   Q_OBJECT
 
-public:
-  enum RotationSTEP {RK = 1};
-
-  Camera();
-
-  void forward();
-  void backward();
-  void left();
-  void right();
-  void up();
-  void down();
-  void setPosition(const QVector3D& position);
-
-  void rotate(int dx, int dy, int dz);
-
-  void setFrontCPDistance(double distance);
-  void setRearCPDistance(double distance);
-
-  CameraState state() const;
-
-
-signals:
-  void changed(const CameraState& newState);
-  void xRotationChanged(int angle);
-  void yRotationChanged(int angle);
-  void zRotationChanged(int angle);
-
-
-public slots:
-  void setXRotation(int angle);
-  void setYRotation(int angle);
-  void setZRotation(int angle);
-
-
 private:
-  double _frontClippingPlaneDistance;
-  double _rearClippingDistance;
-  QVector3D _position;
-  int _xRotation;
-  int _yRotation;
-  int _zRotation;
+    QMatrix4x4 _currentView;
 
+    float      _xTranslation;
+    float      _yTranslation;
+    float      _zTranslation;
 
-  void _notify() {emit changed(state());}
+    float      _xRotation;
+    float      _yRotation;
 
+public:
+    Camera() :
+      _currentView(),
+      _xTranslation(0.f), _yTranslation(0.f), _zTranslation(0.f),
+      _xRotation(0.f), _yRotation(0.f) {}
+
+    inline void setViewMatrix(const QMatrix4x4 & currentView) { _currentView = currentView; }
+    inline const QMatrix4x4 & viewMatrix() { return _currentView; }
+
+    inline void setXTranslation(float tx) { _xTranslation = tx; }
+    inline void setYTranslation(float ty) { _yTranslation = ty; }
+    inline void setZTranslation(float tz) { _zTranslation = tz; }
+
+    void translate(float tx, float ty, float tz);
+
+    inline void setXRotation(float angle) { _xRotation = angle; }
+    inline void setYRotation(float angle) { _yRotation = angle; }
+
+    void rotate(float dx, float dy);
+
+    void updateView();
 };
+
+#endif // __CAMERA_H__
 
