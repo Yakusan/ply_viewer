@@ -7,6 +7,6 @@ varying vec2 tCoord;
 
 void main(void)
 {
-    gl_Position = vertex;
+    gl_Position = vec4(vertex, 0.0, 1.0);
     tCoord = texCoord;
 }
