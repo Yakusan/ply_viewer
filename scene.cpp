@@ -472,14 +472,11 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
 {
   const int dx = event->x() - _prevMousePosition.x();
   const int dy = event->y() - _prevMousePosition.y();
-  const bool panningMode = (event->modifiers() & Qt::ShiftModifier);
   _prevMousePosition = event->pos();
 
 
   if (event->buttons() & Qt::LeftButton)
   {
-    if (panningMode)
-    {
       if (dx != 0)
         _currentCamera.setYRotation(dx);
 
@@ -488,7 +485,6 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
 
       _currentCamera.updateView();
     }
-  }
   update();
 }
 
