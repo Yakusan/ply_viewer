@@ -12,27 +12,15 @@ void Camera::rotate(float dx, float dy) {
   setYRotation(dy);
 }
 
-
+// Vue FPS
 void Camera::updateView()
 {
-    float * tx = _currentView.data() + 12;
-    float * ty = _currentView.data() + 13;
-    float * tz = _currentView.data() + 14;
+    _currentView = _currentView.inverted();
 
-    float tmpX = *tx;
-    float tmpY = *ty;
-    float tmpZ = *tz;
-
-    *tx = 0.f;
-    *ty = 0.f;
-    *tz = 0.f;
-
-    _currentView.rotate(-_yRotation, QVector3D(0, 1, 0));
     _currentView.rotate(_xRotation, QVector3D(1, 0, 0));
-
-    *tx = tmpX + _xTranslation;
-    *ty = tmpY + _yTranslation;
-    *tz = tmpZ + _zTranslation;
+    _currentView.rotate(_yRotation, QVector3D(0, 1, 0));
+    _currentView.translate(QVector3D(_xTranslation, _yTranslation, _zTranslation));
+    _currentView = _currentView.inverted();
 
     _xRotation = 0.f;
     _yRotation = 0.f;

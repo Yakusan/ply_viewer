@@ -379,7 +379,7 @@ void Scene::paintGL()
   //
   // set camera
   //
-  const auto viewMatrix = _projectionMatrix * _currentCamera.viewMatrix() * _worldMatrix;
+  const auto viewMatrix = _projectionMatrix *  _currentCamera.viewMatrix() * _worldMatrix;
 
   //
   // draw points cloud

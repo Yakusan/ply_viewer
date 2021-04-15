@@ -179,32 +179,32 @@ void Viewer::keyPressEvent(QKeyEvent* keyEvent) {
 
     case Qt::Key_Left:
     case Qt::Key_Q:
-      _scene->_currentCamera.setXTranslation(0.01);
+      _scene->_currentCamera.setXTranslation(-0.01);
       break;
 
     case Qt::Key_Right:
     case Qt::Key_D:
-      _scene->_currentCamera.setXTranslation(-0.01);
+      _scene->_currentCamera.setXTranslation(0.01);
       break;
 
     case Qt::Key_Up:
     case Qt::Key_Z:
-      _scene->_currentCamera.setZTranslation(0.01);
+      _scene->_currentCamera.setZTranslation(-0.01);
       break;
 
     case Qt::Key_Down:
     case Qt::Key_S:;
-      _scene->_currentCamera.setZTranslation(-0.01);
+      _scene->_currentCamera.setZTranslation(0.01);
       break;
 
     case Qt::Key_Space:
     case Qt::Key_A:
-      _scene->_currentCamera.setYTranslation(-0.01);
+      _scene->_currentCamera.setYTranslation(0.01);
       break;
 
     case Qt::Key_C:
     case Qt::Key_E:
-      _scene->_currentCamera.setYTranslation(0.01);
+      _scene->_currentCamera.setYTranslation(-0.01);
       break;
 
     default:
