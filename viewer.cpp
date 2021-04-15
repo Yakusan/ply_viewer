@@ -104,14 +104,14 @@ Viewer::Viewer(const QString& configPath)
       _scene->update();
   });
 
-  auto cbDrawSpace = new QCheckBox(tr("Draw Space"));
+  auto cbDrawSpace = new QCheckBox(tr("Draw voxels space"));
   cbDrawSpace->setMaximumWidth(200);
   connect(cbDrawSpace, &QCheckBox::stateChanged, [=](const int state) {
       _scene->_drawSpace = state;
       _scene->update();
   });
 
-  auto cbDrawVoxels = new QCheckBox(tr("Draw Voxels"));
+  auto cbDrawVoxels = new QCheckBox(tr("Draw voxels"));
   cbDrawVoxels->setMaximumWidth(200);
   connect(cbDrawVoxels, &QCheckBox::stateChanged, [=](const int state) {
       _scene->_drawVoxels = state;
