@@ -8,10 +8,6 @@
 #include <QMatrix4x4>
 #include <QMatrix3x3>
 #include <QVector3D>
-<<<<<<< HEAD
-=======
-#include <QSharedPointer>
->>>>>>> origin/camera
 
 #include <unistd.h>
 #include <vector>

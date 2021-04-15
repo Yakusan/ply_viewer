@@ -1,10 +1,12 @@
 HEADERS  = scene.h \
     viewer.h \
-    mainwindow.h
+    mainwindow.h \
+    camera.h
 SOURCES  = scene.cpp \
     main.cpp \
     viewer.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    camera.cpp
 
 QT += widgets
 

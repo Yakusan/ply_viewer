@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstring>
 #include <sstream>
+#include <cassert>
 #include <omp.h>
 
 const size_t POINT_STRIDE =  7; // x, y, z, index, r, g, b
@@ -471,12 +472,10 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
 {
   const int dx = event->x() - _prevMousePosition.x();
   const int dy = event->y() - _prevMousePosition.y();
+  const bool panningMode = (event->modifiers() & Qt::ShiftModifier);
   _prevMousePosition = event->pos();
 
-<<<<<<< HEAD
-  if (event->buttons() & Qt::LeftButton) {
-      Scene::rotate(dy*0.5, dx*0.5, 0);
-=======
+
   if (event->buttons() & Qt::LeftButton)
   {
     if (panningMode)
@@ -489,7 +488,6 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
 
       _currentCamera.updateView();
     }
->>>>>>> origin/camera
   }
   update();
 }
