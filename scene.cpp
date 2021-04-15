@@ -14,7 +14,8 @@ unsigned char *tmp;
 
 Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& maskPath, int hImg, QWidget* parent)
   : QOpenGLWidget(parent),
-    _pointSize(1)
+    _pointSize(1),
+    _fov_v()
 {
   _hImg = hImg;
   _maskPath = maskPath;
@@ -23,7 +24,7 @@ Scene::Scene(const QString& plyFilePath, const QString& bundlePath, QString& mas
   _voxStorage = new unsigned char[_nbVox*_nbVox*_nbVox];
   memset(_voxStorage, 1, _nbVox*_nbVox*_nbVox * sizeof(unsigned char));
   index = 0;
-  _viewMatrix = _listView.at(0);
+  _currentCamera.setViewMatrix(_listView.at(0));
   _projectionMatrix = _listProjection.at(0);
   _indicesBufferVox = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   _spaceSize = qMax(qMax(_pointsBoundMax[0] - _pointsBoundMin[0],_pointsBoundMax[1] - _pointsBoundMin[1]), _pointsBoundMax[2] - _pointsBoundMin[2]);
@@ -137,7 +138,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
     float tmp[3];
     float rt[16];
 
-
+    _fov_v.resize(nbCam);
     for (int i = 0; i < nbCam ; i++) {
         ss.clear();
         std::memset(rt, 0, sizeof(rt));
@@ -148,7 +149,7 @@ void Scene::_loadBundle(const QString& bundleFilePath)
         ss >> tmp[0];
 
         // cf: http://paulbourke.net/miscellaneous/lens/
-        _fov_v.append(2. * std::atan(_hImg * 0.5 / tmp[0]));
+        _fov_v[i] = 2. * std::atan(_hImg * 0.5 / tmp[0]);
 
         ss.clear();
         for (int j = 0; j < 3; j++) {
@@ -372,14 +373,7 @@ void Scene::paintGL()
   //
   // set camera
   //
-  QMatrix4x4 tmp(_viewMatrix);
-  tmp.rotate((GLfloat)_xRotation, 1, 0, 0);
-  tmp.rotate((GLfloat)_yRotation, 0, 1, 0);
-  tmp.rotate((GLfloat)_zRotation, 0, 0, 1);
-  tmp.translate(QVector3D(_xTranslate, _yTranslate, _zTranslate));
-  _projectionMatrix = _listProjection.at(index);
-
-  const auto viewMatrix = _projectionMatrix * tmp * _worldMatrix;
+  const auto viewMatrix = _projectionMatrix *  _currentCamera.viewMatrix() * _worldMatrix;
 
   //
   // draw points cloud
@@ -479,8 +473,23 @@ void Scene::mouseMoveEvent(QMouseEvent *event)
   const int dy = event->y() - _prevMousePosition.y();
   _prevMousePosition = event->pos();
 
+<<<<<<< HEAD
   if (event->buttons() & Qt::LeftButton) {
       Scene::rotate(dy*0.5, dx*0.5, 0);
+=======
+  if (event->buttons() & Qt::LeftButton)
+  {
+    if (panningMode)
+    {
+      if (dx != 0)
+        _currentCamera.setYRotation(dx);
+
+      if (dy != 0 )
+        _currentCamera.setXRotation(dy);
+
+      _currentCamera.updateView();
+    }
+>>>>>>> origin/camera
   }
   update();
 }
@@ -508,39 +517,6 @@ void Scene::setVoxelSize(int nb) {
   g->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
   _vertexBufferVox.release();
   update();
-}
-
-void Scene::setXRotation(int angle)
-{
-  angle = angle % 360;
-  if (angle != _xRotation) {
-    _xRotation = angle;
-  }
-}
-
-
-void Scene::setYRotation(int angle)
-{
-  angle = angle % 360;
-  if (angle != _yRotation) {
-    _yRotation = angle;
-  }
-}
-
-
-void Scene::setZRotation(int angle)
-{
-  angle = angle % 360;
-  if (angle != _zRotation) {
-    _zRotation = angle;
-  }
-}
-
-
-void Scene::rotate(int dx, int dy, int dz) {
-  setXRotation(_xRotation - dx);
-  setYRotation(_yRotation + dy);
-  setZRotation(_zRotation - dz);
 }
 
 void Scene::intersect() {
